@@ -130,10 +130,15 @@ print(f"  Aristas: {', '.join(esquema['edge_labels'])}")
 # %%
 PLANTILLA = "000050"
 
+# Se elige el reclamo cuya calle tenga más lugares, y no el primero que
+# aparezca: con pocos reclamos el primero suele caer en una calle con un solo
+# POI y el ejemplo no muestra nada.
 candidato, segundos = ejecutar(
     conexion,
     "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)<-[:EN_CALLE]-(l:Lugar) "
-    "WHERE r.categoria = 'Ruido' RETURN r.reporte_id AS id LIMIT 1",
+    "WHERE r.categoria = 'Ruido' "
+    "RETURN r.reporte_id AS id, COUNT(l) AS lugares "
+    "GROUP BY r ORDER BY lugares DESC LIMIT 1",
 )
 ejemplo = PLANTILLA
 if candidato.empty:

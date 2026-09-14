@@ -35,33 +35,40 @@ CRS_METRICO = "EPSG:32719"  # UTM 19S, metros
 
 NIVEL_ADMIN_COMUNA = "8"
 
-# Repositorio hermano con los datasets del curso de datos geográficos.
-REPO_CURSO = Path(os.environ.get("GDS_CURSO", RAIZ.parent / "gds-course-materials"))
 URL_DATOS_CURSO = "https://dcc.uchile.cl/~egraells/gds-data"
 
-# Fuentes que se resuelven en orden: variable de entorno, repositorio del
-# curso, descarga pública. `None` en la tercera posición significa que no hay
-# versión publicada y la capa se omite si no está local.
+# Cada capa de contexto se resuelve en dos pasos: la variable de entorno, para
+# apuntar a una copia propia, y la descarga del dataset publicado. No se busca
+# en repositorios vecinos: si la fuente dependiera de lo que hay en la máquina,
+# el mismo código daría resultados distintos en cada una y el caso dejaría de
+# ser reproducible.
+#
+# `pesada` marca las descargas que no se hacen sin pedirlas. La cartografía
+# censal se publica entera, con el país completo, y son 758 MB para quedarse
+# con las zonas de un área.
 FUENTES = {
     "sosafe": {
         "env": "FROGQL_SOSAFE",
-        "curso": "sosafe/reportes-2024.parquet",
         "descarga": ("sosafe-clustering", "sosafe-clustering/reportes-quincena.parquet"),
+        "pesada": False,
     },
     "venues": {
         "env": "FROGQL_VENUES",
-        "curso": "foursquare-santiago/venues.parquet",
         "descarga": ("foursquare-santiago", "foursquare-santiago/venues.parquet"),
+        "pesada": False,
     },
     "checkins": {
         "env": "FROGQL_CHECKINS",
-        "curso": "foursquare-santiago/checkins.parquet",
         "descarga": ("foursquare-santiago", "foursquare-santiago/checkins.parquet"),
+        "pesada": False,
     },
     "zonas": {
         "env": "FROGQL_ZONAS",
-        "curso": "censo2024-cartografia/Cartografia_censo2024_Pais_Zonal.parquet",
-        "descarga": None,
+        "descarga": (
+            "censo2024-cartografia",
+            "censo2024-cartografia/Cartografia_censo2024_Pais_Zonal.parquet",
+        ),
+        "pesada": True,
     },
 }
 
@@ -143,11 +150,22 @@ def crear_directorios() -> None:
         d.mkdir(parents=True, exist_ok=True)
 
 
+def descargas_pesadas_habilitadas() -> bool:
+    """Si se autorizó bajar los datasets grandes.
+
+    Se activa con `--con-censo` en la línea de comandos o con
+    `FROGQL_DESCARGAS_PESADAS=1`.
+    """
+    if "--con-censo" in sys.argv[1:]:
+        return True
+    return os.environ.get("FROGQL_DESCARGAS_PESADAS", "") not in ("", "0")
+
+
 def resolver(nombre: str, descargar: bool = True) -> Path | None:
     """Devuelve la ruta local de una fuente, descargándola si hace falta.
 
-    Retorna `None` cuando la fuente no está disponible y no existe versión
-    publicada. Quien llama decide si la capa es opcional.
+    Retorna `None` cuando la fuente no está disponible. Quien llama decide si
+    la capa es opcional.
     """
     spec = FUENTES[nombre]
 
@@ -158,18 +176,13 @@ def resolver(nombre: str, descargar: bool = True) -> Path | None:
             raise FileNotFoundError(f"{spec['env']}={ruta} no existe.")
         return ruta
 
-    ruta_curso = REPO_CURSO / "data" / spec["curso"]
-    if ruta_curso.exists():
-        return ruta_curso
-
-    if spec["descarga"] is None:
-        return None
-
     dataset, relativa = spec["descarga"]
     ruta_local = DIR_DATOS / relativa
     if ruta_local.exists():
         return ruta_local
     if not descargar:
+        return None
+    if spec["pesada"] and not descargas_pesadas_habilitadas():
         return None
 
     from redosm.descarga import descargar_dataset_curso

@@ -8,9 +8,9 @@ tres capas de contexto: los reclamos ciudadanos de SOSAFE, los puntos de
 interés de OSM y las zonas censales del Censo 2024.
 
 El mismo código corre sobre dos escalas. La comuna de Independencia sirve para
-entender el modelo leyendo los datos a ojo. El Gran Santiago, 34 comunas y casi
-un millón de nodos, sirve para medir cómo escalan la construcción, la
-exportación y las consultas.
+entender el modelo leyendo los datos a ojo. El Gran Santiago, 34 comunas y 460 mil
+nodos, sirve para medir cómo escalan la construcción, la exportación y las
+consultas.
 
 La pregunta que motiva el modelo es relacional: dado un reclamo por ruido, qué
 lugares están en la misma calle. Responderla con geometría exige un buffer y un
@@ -37,17 +37,17 @@ Escanilla                                                       Mi Chimbote
 |---|---|---|
 | Comunas | 1 | 34 |
 | Superficie | 7.3 km^2 | 1145.4 km^2 |
-| Ways de OSM con `highway` | 1654 | 183 720 |
-| Intersecciones | 2597 | 288 701 |
-| Segmentos entre intersecciones | 3533 | 413 663 |
-| Largo de la red | 182 km | 21 832 km |
-| Calles (ejes con nombre) | 324 | 38 419 |
-| Puntos de interés | 675 | 45 578 |
-| Reclamos SOSAFE 2024 | 5764 | 569 204 |
+| Ways de OSM con `highway` | 1683 | 183 797 |
+| Intersecciones | 2610 | 288 825 |
+| Segmentos entre intersecciones | 3551 | 413 831 |
+| Largo de la red | 185 km | 21 835 km |
+| Calles (ejes con nombre) | 325 | 38 427 |
+| Puntos de interés | 675 | 45 613 |
+| Reclamos SOSAFE | 226 | 21 880 |
 | Zonas censales | 26 | 1639 |
-| Venues de Foursquare | 815 | 64 382 |
-| **Nodos del grafo** | **10 201** | **1 007 923** |
-| **Aristas del grafo** | **31 996** | **3 688 253** |
+| Venues de Foursquare | 822 | 64 382 |
+| **Nodos del grafo** | **4684** | **460 766** |
+| **Aristas del grafo** | **15 608** | **1 687 173** |
 
 El Gran Santiago se define como las 32 comunas de la Provincia de Santiago más
 Puente Alto y San Bernardo, recortadas al rectángulo que el curso de datos
@@ -64,12 +64,12 @@ Las tres redes viales sobre el mismo conjunto de intersecciones:
 
 | Área | Modo | Intersecciones | Tramos | Arcos | Largo | Componentes | Componente mayor |
 |---|---|---|---|---|---|---|---|
-| Independencia | Auto | 1836 | 2379 | 3511 | 140 km | 5 | 99.5% |
-| Independencia | Bicicleta | 1839 | 2410 | 2410 | 138 km | 9 | 98.0% |
-| Independencia | Peatón | 2228 | 2940 | 2940 | 148 km | 11 | 91.6% |
-| Gran Santiago | Auto | 197 831 | 250 095 | 420 898 | 13 013 km | 327 | 99.0% |
-| Gran Santiago | Bicicleta | 202 257 | 257 317 | 257 317 | 13 693 km | 621 | 98.3% |
-| Gran Santiago | Peatón | 243 774 | 342 789 | 342 789 | 16 862 km | 1007 | 97.9% |
+| Independencia | Auto | 1847 | 2397 | 3527 | 143 km | 4 | 99.6% |
+| Independencia | Bicicleta | 1829 | 2400 | 2400 | 138 km | 8 | 98.1% |
+| Independencia | Peatón | 2220 | 2931 | 2931 | 147 km | 10 | 91.6% |
+| Gran Santiago | Auto | 197 899 | 250 155 | 420 994 | 13 013 km | 328 | 99.0% |
+| Gran Santiago | Bicicleta | 202 332 | 257 392 | 257 392 | 13 691 km | 621 | 98.3% |
+| Gran Santiago | Peatón | 243 866 | 342 921 | 342 921 | 16 862 km | 1007 | 97.9% |
 
 La red de autos es dirigida y respeta `oneway`, por eso tiene más arcos que
 tramos. Las otras dos son no dirigidas. El largo y el grado medio se calculan
@@ -78,34 +78,32 @@ entre modos.
 
 ## Escala
 
-El pipeline completo del Gran Santiago tarda menos de cinco minutos y cabe en
-nueve gigabytes de memoria. Las mediciones son de una máquina con 20 núcleos y
+El pipeline completo del Gran Santiago tarda menos de cuatro minutos y cabe en
+siete gigabytes de memoria. Las mediciones son de una máquina con 20 núcleos y
 62 GB de RAM, con los datos en disco local y el extracto PBF ya descargado.
 
 | Etapa | Independencia | Gran Santiago |
 |---|---|---|
-| Extracción de OSM y capas de contexto (`01`) | 1 s | 55 s |
-| Partición en intersecciones | 0.1 s | 12.6 s |
-| Agregación en calles | 0.3 s | 25.1 s |
-| Construcción de las tres redes | 0.3 s | 34.2 s |
-| Grafo de propiedades | 0.5 s | 55.7 s |
-| Exportación de los cinco archivos | 1.2 s | 136.3 s |
-| **`02` completo** | **4 s** | **274 s** |
-| Pico de memoria residente en `01` | 0.8 GB | 4.9 GB |
-| Pico de memoria residente en `02` | 0.5 GB | 9.1 GB |
-| Pico de memoria residente en `03` | 0.3 GB | 12.7 GB |
+| Extracción de OSM y capas de contexto (`01`) | 29 s | 89 s |
+| Partición en intersecciones | 0.1 s | 13.3 s |
+| Agregación en calles | 0.3 s | 26.4 s |
+| Construcción de las tres redes | 0.3 s | 37.8 s |
+| Grafo de propiedades | 0.3 s | 32.4 s |
+| Exportación de los cinco archivos | 1.2 s | 101.6 s |
+| **`02` completo** | **4 s** | **217 s** |
+| Pico de memoria residente en `02` | 0.4 GB | 6.7 GB |
+| Pico de memoria residente en `03` | 0.3 GB | 6.4 GB |
 
 | Salida | Independencia | Gran Santiago |
 |---|---|---|
-| `<área>.json` para froGQL | 8.3 MB | 928.1 MB |
-| `<área>.graphml` | 12.5 MB | 1377.4 MB |
-| `red-auto.graphml` | 3.2 MB | 378.5 MB |
-| `red-peaton.graphml` | 2.6 MB | 302.5 MB |
+| `<área>.json` para froGQL | 4.0 MB | 438.8 MB |
+| `<área>.graphml` | 6.3 MB | 686.7 MB |
+| `red-auto.graphml` | 3.2 MB | 378.6 MB |
+| `red-peaton.graphml` | 2.6 MB | 302.6 MB |
 | `red-bici.graphml` | 2.2 MB | 243.2 MB |
-| `csv/` | 3.7 MB | 414.7 MB |
-| `.gdb` construido por froGQL | 5.0 MB | 543.5 MB |
-| Importación del JSON | 0.3 s | 43.1 s |
-| Importación del paquete CSV | 0.3 s | 48.1 s |
+| `csv/` | 1.9 MB | 215.8 MB |
+| `.gdb` construido por froGQL | 2.3 MB | 233.4 MB |
+| Importación del JSON | 0.2 s | 20.8 s |
 
 Los tiempos de las doce consultas en una corrida, con froGQL 0.5.1. Cada
 consulta se corre completa: el parámetro `limit` de `execute()` es un tope de
@@ -116,23 +114,24 @@ aplica después del `ORDER BY`.
 
 | Consulta | Independencia | Gran Santiago |
 |---|---|---|
-| `01-lugares-en-la-misma-calle` | 0.5 ms | 0.6 ms |
-| `06-lugares-a-una-cuadra` | 0.5 ms | 4.1 ms |
-| `05-calles-que-cruzan` | 0.9 ms | 93 ms |
-| `04-lugares-cercanos-al-ruido` | 9.2 ms | 2.8 s |
-| `10-origen-de-la-asignacion` | 5.0 ms | 3.8 s |
-| `03-locales-de-alcohol-en-calles-con-ruido` | 10.1 ms | 3.8 s |
-| `08-ruido-por-zona-censal` | 16.3 ms | 4.7 s |
-| `02-ruido-por-calle` | 16.2 ms | 5.8 s |
-| `07-barreras-modales` | 13.2 ms | 6.3 s |
-| `12-vida-nocturna-de-foursquare` | 21.6 ms | 14.0 s |
-| `09-calles-sin-lugares` | 15.1 ms | 14.4 s |
-| `11-reclamos-de-ruido-por-local` | 214.3 ms | 253 s |
+| `01-lugares-en-la-misma-calle` | 1.5 ms | 0.5 ms |
+| `06-lugares-a-una-cuadra` | 1.1 ms | 1.8 ms |
+| `05-calles-que-cruzan` | 0.9 ms | 88 ms |
+| `04-lugares-cercanos-al-ruido` | 0.8 ms | 102 ms |
+| `08-ruido-por-zona-censal` | 1.7 ms | 251 ms |
+| `02-ruido-por-calle` | 2.0 ms | 670 ms |
+| `10-origen-de-la-asignacion` | 2.4 ms | 830 ms |
+| `03-locales-de-alcohol-en-calles-con-ruido` | 4.3 ms | 903 ms |
+| `11-reclamos-de-ruido-por-local` | 11.6 ms | 1.9 s |
+| `12-vida-nocturna-de-foursquare` | 6.9 ms | 2.2 s |
+| `09-calles-sin-lugares` | 7.4 ms | 2.8 s |
+| `07-barreras-modales` | 13.2 ms | 4.2 s |
 
-Las consultas que parten de un nodo identificado y recorren dos o tres aristas
-mantienen su costo al cambiar de escala: `01` tarda medio milisegundo sobre el
-millón de nodos. Las que recorren una etiqueta completa crecen con el tamaño de
-esa etiqueta.
+Las consultas que parten de un nodo identificado mantienen su costo al cambiar
+de escala: `01` tarda medio milisegundo sobre los 460 mil nodos de la ciudad.
+Las que recorren una etiqueta completa crecen con el tamaño de esa etiqueta, y
+las más caras son las que recorren las tres de circulación, que son las que más
+aristas tienen.
 
 Los índices no explican esa diferencia. froGQL construye índices automáticos
 sobre los pares `(etiqueta, propiedad)` de valor único al abrir la base, y en
@@ -145,9 +144,11 @@ recorrer las aristas, no en encontrar los reclamos.
 Las consultas `03` y `11` preguntan lo mismo con dos formulaciones. La `03` usa
 `EXISTS` para saber si la calle tiene algún reclamo por ruido; la `11` cuenta
 esos reclamos con `GROUP BY`. Contar obliga a unir cada local con cada reclamo
-de su calle, y en Avenida Irarrázaval, con 1289 reclamos por ruido y decenas de
-locales, eso son decenas de miles de filas antes de agrupar. La diferencia entre
-las dos es de dos órdenes de magnitud: 3.8 segundos contra 253.
+de su calle, así que su costo crece con el producto de las dos etiquetas y no
+con la suma. Con la quincena publicada la diferencia es de dos veces, 0.9
+segundos contra 1.9. Sobre el año 2024 completo, que multiplica por 26 los
+reclamos, la misma comparación da 3.5 segundos contra 236: el patrón de la `11`
+es el que primero se degrada al crecer los datos.
 
 ## Cómo se corre
 
@@ -208,22 +209,22 @@ Seis tipos de nodo y siete de arista.
 
 | Nodo | Independencia | Gran Santiago | Atributos principales |
 |---|---|---|---|
-| `Calle` | 324 | 38 419 | `nombre`, `comuna`, `tipo`, `largo_m`, `segmentos`, `permite_auto`, `permite_bici`, `permite_peaton` |
-| `Interseccion` | 2597 | 288 701 | `lon`, `lat`, `grado` |
-| `Lugar` | 675 | 45 578 | `etiqueta`, `nombre`, `categoria`, `amenity`, `shop`, `direccion_calle`, `lon`, `lat` |
-| `Reclamo` | 5764 | 569 204 | `reporte_id`, `categoria`, `grupo`, `fecha`, `hora`, `descripcion`, `lon`, `lat` |
-| `Venue` | 815 | 64 382 | `venue_id`, `categoria`, `checkins`, `lon`, `lat` |
+| `Calle` | 325 | 38 427 | `nombre`, `comuna`, `tipo`, `largo_m`, `segmentos`, `permite_auto`, `permite_bici`, `permite_peaton` |
+| `Interseccion` | 2610 | 288 825 | `lon`, `lat`, `grado` |
+| `Lugar` | 675 | 45 613 | `etiqueta`, `nombre`, `categoria`, `amenity`, `shop`, `direccion_calle`, `lon`, `lat` |
+| `Reclamo` | 226 | 21 880 | `reporte_id`, `categoria`, `grupo`, `fecha`, `hora`, `descripcion`, `lon`, `lat` |
+| `Venue` | 822 | 64 382 | `venue_id`, `categoria`, `checkins`, `lon`, `lat` |
 | `ZonaCensal` | 26 | 1639 | `zona_id`, `n_per`, `n_hog`, `prom_edad`, `n_transporte_*` |
 
 | Arista | Independencia | Gran Santiago | Sentido | De | A |
 |---|---|---|---|---|---|
-| `EN_CALLE` | 9028 | 927 546 | dirigida | `Interseccion`, `Lugar`, `Reclamo`, `Venue` | `Calle` |
-| `CERCA_DE` | 6048 | 975 814 | dirigida | `Reclamo` | `Lugar` (a menos de 50 m) |
-| `EN_ZONA` | 7245 | 676 913 | dirigida | `Lugar`, `Reclamo`, `Venue` | `ZonaCensal` |
-| `CONECTA_AUTO` | 3511 | 420 898 | dirigida | `Interseccion` | `Interseccion` |
-| `CONECTA_PEATON` | 2940 | 342 789 | no dirigida | `Interseccion` | `Interseccion` |
-| `CONECTA_BICI` | 2410 | 257 317 | no dirigida | `Interseccion` | `Interseccion` |
-| `CRUZA_CON` | 814 | 86 976 | no dirigida | `Calle` | `Calle` |
+| `EN_CALLE` | 3961 | 408 501 | dirigida | `Interseccion`, `Lugar`, `Reclamo`, `Venue` | `Calle` |
+| `CERCA_DE` | 253 | 40 057 | dirigida | `Reclamo` | `Lugar` (a menos de 50 m) |
+| `EN_ZONA` | 1722 | 130 320 | dirigida | `Lugar`, `Reclamo`, `Venue` | `ZonaCensal` |
+| `CONECTA_AUTO` | 3527 | 420 994 | dirigida | `Interseccion` | `Interseccion` |
+| `CONECTA_PEATON` | 2931 | 342 921 | no dirigida | `Interseccion` | `Interseccion` |
+| `CONECTA_BICI` | 2400 | 257 392 | no dirigida | `Interseccion` | `Interseccion` |
+| `CRUZA_CON` | 814 | 86 988 | no dirigida | `Calle` | `Calle` |
 
 Los tres tipos de conexión viven sobre el mismo conjunto de intersecciones. La
 partición geométrica de las ways corre una sola vez y cada modo es un
@@ -296,8 +297,8 @@ conserva el texto original.
 
 Los tres formatos se escriben recorriendo los datos, sin construir el documento
 completo en memoria. Para Independencia el detalle es irrelevante; para el Gran
-Santiago el JSON ocupa 928 MB y el GraphML 1.38 GB, y el pico del pipeline ya
-llega a nueve gigabytes.
+Santiago el JSON ocupa 439 MB y el GraphML 687 MB, y el pico del pipeline llega
+a siete gigabytes.
 
 ## Slides
 
@@ -320,24 +321,35 @@ escriben los scripts `03` y `02`, así que las cifras del deck son las de la
 
 ## Fuentes de datos
 
-| Capa | Fuente | Resolución |
+| Capa | Fuente | Descarga |
 |---|---|---|
-| Límites comunales | OpenStreetMap, relaciones `admin_level=8` | Descarga automática |
-| Vías | OpenStreetMap, `highway=*` | Descarga automática |
-| Puntos de interés | OpenStreetMap, `amenity`, `shop`, `leisure`, `tourism`, `office`, `healthcare` | Descarga automática |
-| Reclamos | SOSAFE | `FROGQL_SOSAFE`, repositorio del curso, o la quincena publicada |
-| Zonas censales | Censo 2024, cartografía zonal del INE | `FROGQL_ZONAS` o repositorio del curso |
-| Venues | Foursquare, subconjunto de Santiago del check-in global de Yang et al. (2019) | `FROGQL_VENUES` o descarga pública |
+| Límites comunales | OpenStreetMap, relaciones `admin_level=8` | automática |
+| Vías | OpenStreetMap, `highway=*` | automática |
+| Puntos de interés | OpenStreetMap, seis tags temáticos | automática |
+| Reclamos | SOSAFE, quincena anonimizada de abril de 2024 | automática, 2 MB |
+| Venues | Foursquare, subconjunto de Santiago del check-in global de Yang et al. (2019) | automática, 23 MB |
+| Zonas censales | Censo 2024, cartografía zonal del INE | con `--con-censo`, 758 MB |
 
-Cada capa se resuelve en tres pasos: la variable de entorno, el repositorio
-hermano `gds-course-materials` (configurable con `GDS_CURSO`) y la descarga
-pública cuando existe. Las dos capas opcionales, zonas censales y venues, se
-omiten si no hay fuente, y el grafo se arma igual sin ellas.
+Todo se descarga. Las capas de OpenStreetMap salen de un extracto que baja
+quackosm y las de contexto, de los datasets que el curso de datos geográficos
+publica en `dcc.uchile.cl/~egraells/gds-data/`. La resolución no busca en
+repositorios vecinos: si dependiera de lo que hay en la máquina, el mismo
+código daría resultados distintos en cada una.
 
-La fuente de SOSAFE cambia el tamaño del caso. El año 2024 completo del
-repositorio del curso da 569 204 reclamos en el Gran Santiago y 5764 en
-Independencia. La quincena publicada, que es la única versión pública y
-anonimizada, da 224 reclamos en Independencia, 82 de ellos por ruido.
+Las zonas censales van aparte porque esa cartografía se publica entera, con el
+país completo, y son 758 MB para quedarse con las zonas de un área. Sin ellas
+el grafo se arma igual, sin nodos `ZonaCensal`, y la consulta `08` queda vacía.
+
+Cada capa admite una variable de entorno para apuntar a una copia propia:
+`FROGQL_SOSAFE`, `FROGQL_VENUES`, `FROGQL_CHECKINS` y `FROGQL_ZONAS`. Esa es la
+vía para correr el caso sobre el año 2024 completo de SOSAFE, que tiene 569 204
+reclamos en el Gran Santiago contra los 21 880 de la quincena, pero que no es
+público.
+
+**Los datos de OpenStreetMap son vivos.** Las cifras de este README son de una
+corrida del 14 de septiembre de 2026; una corrida posterior devuelve números
+algo distintos, porque el mapa cambia. Las cifras de las capas publicadas sí son
+estables.
 
 ## Componentes tomados del curso de datos geográficos
 
@@ -385,7 +397,7 @@ Lo mismo explica los 56 726 m del eje poniente de Avenida Américo Vespucio.
 asignación por cercanía falla en las esquinas: un local de la avenida puede
 quedar más cerca del pasaje perpendicular que del eje de la avenida. De los
 lugares que declaran su calle en el tag `addr:street`, la calle más cercana es
-la declarada en 73.4% de los casos en Independencia y en 63.1% en el Gran
+la declarada en 73.6% de los casos en Independencia y en 63.2% en el Gran
 Santiago. Por eso la asignación definitiva usa la calle declarada cuando existe
 en la red y la cercanía como respaldo, y cada arista `EN_CALLE` registra en
 `origen` cuál de los dos criterios se usó, para que una consulta pueda
@@ -400,9 +412,9 @@ corredores de buses (`highway=busway`) no entran en ninguna de las tres redes
 porque no admiten autos particulares, bicicletas ni peatones.
 
 **La red ciclable y la infraestructura ciclista son cantidades distintas.** Por
-13 693 km del Gran Santiago se puede pedalear legalmente y 603 km tienen
-ciclovía o banda demarcada. De los 2050 ways con infraestructura declarada, 830
-son ways propias (`highway=cycleway`) y 1220 la declaran como atributo de la
+13 691 km del Gran Santiago se puede pedalear legalmente y 604 km tienen
+ciclovía o banda demarcada. De los 2054 ways con infraestructura declarada, 832
+son ways propias (`highway=cycleway`) y 1222 la declaran como atributo de la
 calzada (`cycleway:left`, `cycleway:right`): contar solo las primeras deja
 fuera buena parte de la red.
 
@@ -414,7 +426,7 @@ actual descarta, cuando falta el nombre, el mobiliario urbano y el equipamiento
 de parcela privada, que son las dos clases que inflan el conteo sin aportar
 lugares: 6960 piscinas y 5422 canchas de casas y condominios, mapeadas desde
 imágenes satelitales, más 3357 escaños y 4633 estacionamientos. Relajar el
-filtro suma 8104 lugares en el Gran Santiago y 51 en Independencia. Los que
+filtro suma 8139 lugares en el Gran Santiago y 51 en Independencia. Los que
 entran sin nombre conservan su categoría, y el grafo les da una `etiqueta` con
 esa categoría entre paréntesis, de modo que un resultado siga siendo legible y
 quede a la vista que el nombre falta en el mapa y no en el dato.

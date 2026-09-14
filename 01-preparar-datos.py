@@ -2,8 +2,17 @@
 
 Uso
 ---
-    uv run python 01-preparar-datos.py                  # Independencia
-    uv run python 01-preparar-datos.py --area santiago  # Gran Santiago
+    uv run python 01-preparar-datos.py                    # Independencia
+    uv run python 01-preparar-datos.py --area santiago    # Gran Santiago
+    uv run python 01-preparar-datos.py --con-censo        # con zonas censales
+
+Todo se descarga: las capas de OpenStreetMap salen de un extracto que baja
+quackosm y las de contexto, de los datasets publicados por el curso de datos
+geográficos. El resultado no depende de lo que haya en la máquina.
+
+`--con-censo` agrega las zonas censales del Censo 2024. Va aparte porque la
+cartografía se publica entera, con el país completo, y son 758 MB de descarga
+para quedarse con las zonas de un área.
 
 Salidas
 -------
@@ -83,7 +92,10 @@ if __name__ == "__main__":
     print("[5/5] Capas opcionales")
     zonas = contexto.cargar_zonas(limite)
     if zonas is None:
-        print("  Zonas censales: sin cartografía del Censo 2024, se omite.")
+        print(
+            "  Zonas censales: se omiten. Para incluirlas, correr con --con-censo"
+            "\n  (descarga 758 MB de cartografía del Censo 2024)."
+        )
     else:
         guardar(zonas, config.dir_contexto() / "zonas.parquet")
         print(f"  Población censada en el área: {int(zonas['n_per'].sum())}")

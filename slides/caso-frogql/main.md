@@ -11,14 +11,14 @@ Dado un reclamo por ruido, ¿qué lugares están en la misma calle?
 Cuatro fuentes, ninguna pensada para la otra:
 
 - **OpenStreetMap**: calles, puntos de interés y límites comunales.
-- **SOSAFE**: reportes ciudadanos georreferenciados de 2024.
+- **SOSAFE**: quincena de reportes ciudadanos de abril de 2024.
 - **Censo 2024**: zonas censales con población.
 - **Foursquare**: venues con check-ins de 2012.
 ::::
 :::: {.column width="48%"}
 Ninguna trae el identificador de la vía. Lo único que comparten es estar en el mismo lugar del mapa.
 
-Sobre ese punto en común se arma todo lo demás.
+Las cuatro se descargan solas, así que el caso se reproduce desde un clon del repositorio.
 ::::
 :::
 
@@ -72,7 +72,7 @@ digraph T {
 ::::
 :::
 
-En Independencia, 1654 ways producen **2597 intersecciones** y **3533 segmentos**. En el Gran Santiago, 183 720 ways producen 288 701 y 413 663.
+En Independencia, 1683 ways producen **2610 intersecciones** y **3551 segmentos**. En el Gran Santiago, 183 797 ways producen 288 825 y 413 831.
 
 ## Un solo conjunto de nodos, tres redes {.smaller}
 
@@ -91,7 +91,7 @@ La red de autos es dirigida y respeta `oneway`; las otras dos no.
 
 ## {.image}
 
-![Las tres redes de Independencia sobre las mismas intersecciones. Los 140 km para auto, 138 para bicicleta y 148 a pie son el mismo material filtrado por tres reglas distintas.](img/redes-por-modo.png){width="92%"}
+![Las tres redes de Independencia sobre las mismas intersecciones. Los 143 km para auto, 138 para bicicleta y 147 a pie son el mismo material filtrado por tres reglas distintas.](img/redes-por-modo.png){width="92%"}
 
 ## {.image}
 
@@ -127,7 +127,7 @@ La asignación por cercanía falla en las esquinas: un local de la avenida puede
 Parte de los puntos de interés declara su calle en el tag `addr:street`. Cuando esa calle existe en la red, se usa esa.
 ::::
 :::: {.column width="50%"}
-La coincidencia entre el eje más cercano y el declarado es de **73%** en Independencia y **63%** en el Gran Santiago.
+La coincidencia entre el eje más cercano y el declarado es de **74%** en Independencia y **63%** en el Gran Santiago.
 
 Cada arista `EN_CALLE` guarda en `origen` cuál de los dos criterios se usó, así una consulta puede descartar lo menos confiable.
 ::::
@@ -166,7 +166,7 @@ Las cuatro aristas sin rótulo hacia `Calle` son `EN_CALLE`, y las dos sin rótu
 
 ## {.image}
 
-![El mismo modelo a dos escalas: 10 201 nodos y 31 996 aristas en la comuna, 1 007 923 y 3 688 253 en la ciudad. Los reclamos dominan los nodos y la proximidad domina las aristas.](img/escala.png){width="92%"}
+![El mismo modelo a dos escalas: 4684 nodos y 15 608 aristas en la comuna, 460 766 y 1 687 173 en la ciudad. Las intersecciones dominan los nodos y la circulación domina las aristas.](img/escala.png){width="92%"}
 
 ## Tres formatos, tres consumidores {.smaller}
 
@@ -188,7 +188,7 @@ Un archivo por etiqueta. Su cargador trata toda arista como dirigida.
 ::::
 :::
 
-Los tres se escriben recorriendo los datos y no construyendo el documento en memoria: el JSON de la ciudad pesa 928 MB y froGQL lo carga en 43 segundos.
+Los tres se escriben recorriendo los datos y no construyendo el documento en memoria: el JSON de la ciudad pesa 439 MB y froGQL lo carga en 21 segundos.
 
 # Lo que se puede preguntar
 
@@ -196,11 +196,11 @@ Los tres se escriben recorriendo los datos y no construyendo el documento en mem
 
 ```
 MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)<-[:EN_CALLE]-(l:Lugar)
-WHERE r.reporte_id = '000861'
+WHERE r.reporte_id = '000000'
 RETURN c.nombre AS calle, l.etiqueta AS lugar
 ```
 
-El reclamo dice "en Av la paz, con esquina Echeverría hay unos locales que tiene la música con muy alto volumen". La consulta devuelve los locales de esa calle, entre ellos una botillería y un local de comida rápida, en medio milisegundo.
+El reclamo dice "Música alta, 20.00, por favor, no se puede estar tranquilo" y está en Avenida Independencia. La consulta devuelve los locales de esa calle, entre ellos siete tiendas de telas y una comisaría, en un milisegundo.
 
 ## {.image}
 
@@ -219,9 +219,9 @@ Dos consultas preguntan por locales de alcohol en calles con reclamos por ruido.
 Una usa `EXISTS` para saber si la calle tiene alguno. La otra los cuenta con `GROUP BY`.
 ::::
 :::: {.column width="50%"}
-Contar obliga a unir cada local con cada reclamo de su calle. En Avenida Irarrázaval, con 1289 reclamos y decenas de locales, son decenas de miles de filas antes de agrupar.
+Contar obliga a unir cada local con cada reclamo de su calle. En Avenida Irarrázaval hay 393 lugares y 66 reclamos por ruido, y ese producto se paga entero antes de agrupar.
 
-En la ciudad: **3.8 segundos contra 253**.
+En la ciudad: **0.9 segundos contra 1.9**. Con el año 2024 completo, que multiplica por 26 los reclamos, la misma comparación da **3.5 contra 236**.
 ::::
 :::
 
