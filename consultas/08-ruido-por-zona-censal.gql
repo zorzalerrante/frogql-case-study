@@ -1,0 +1,9 @@
+-- Reclamos por ruido y población de cada zona censal.
+-- Cruza el reporte ciudadano con el Censo 2024 sin salir del grafo.
+MATCH (r:Reclamo)-[:EN_ZONA]->(z:ZonaCensal)
+WHERE r.categoria = 'Ruido'
+RETURN z.zona_id AS zona, z.comuna AS comuna, z.n_per AS poblacion,
+       z.n_hog_unipersonales AS hogares_unipersonales, COUNT(r) AS reclamos
+GROUP BY z
+ORDER BY reclamos DESC
+LIMIT 20

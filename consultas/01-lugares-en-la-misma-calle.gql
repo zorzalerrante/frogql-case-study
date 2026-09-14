@@ -1,0 +1,7 @@
+-- Lugares que están en la misma calle que un reclamo dado.
+-- Es la consulta que motiva el modelo: con la calle reificada como nodo,
+-- "misma calle" son dos aristas, sin cálculo geométrico.
+-- Cambiar el identificador por el del reclamo que se quiera consultar.
+MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)<-[:EN_CALLE]-(l:Lugar)
+WHERE r.reporte_id = '000050'
+RETURN c.nombre AS calle, c.comuna AS comuna, l.etiqueta AS lugar, l.categoria AS categoria

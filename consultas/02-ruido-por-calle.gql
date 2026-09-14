@@ -1,0 +1,9 @@
+-- Calles con más reclamos por ruido.
+-- `GROUP BY c` agrupa por la identidad del nodo, no por su nombre: dos calles
+-- homónimas de comunas distintas son dos nodos y quedan separadas.
+MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)
+WHERE r.categoria = 'Ruido'
+RETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, COUNT(r) AS reclamos
+GROUP BY c
+ORDER BY reclamos DESC
+LIMIT 20

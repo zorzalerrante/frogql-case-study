@@ -1,0 +1,7 @@
+-- Lugares en las calles que cruzan la calle de un reclamo.
+-- Extiende la consulta 01 un salto más: de la calle del reclamo a las calles
+-- que la cruzan, y de ahí a sus lugares.
+MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)~[:CRUZA_CON]~(d:Calle)<-[:EN_CALLE]-(l:Lugar)
+WHERE r.reporte_id = '000050'
+RETURN d.nombre AS calle_vecina, l.etiqueta AS lugar, l.categoria AS categoria
+LIMIT 20

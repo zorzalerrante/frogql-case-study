@@ -1,0 +1,8 @@
+-- Calles que cruzan una calle dada.
+-- CRUZA_CON se materializa desde las intersecciones compartidas y guarda en
+-- `esquinas` cuántas esquinas comparte el par.
+MATCH (a:Calle)~[e:CRUZA_CON]~(b:Calle)
+WHERE a.nombre = 'Avenida Hipódromo Chile'
+RETURN b.nombre AS cruza_con, b.tipo AS tipo, e.esquinas AS esquinas
+ORDER BY esquinas DESC
+LIMIT 20

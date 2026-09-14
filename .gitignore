@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+datos/
+salida/
+*.gdb
+.ruff_cache/

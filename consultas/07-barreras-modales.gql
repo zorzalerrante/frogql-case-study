@@ -1,0 +1,8 @@
+-- Tramos por los que circula un auto y no una bicicleta.
+-- Son los bordes que separan las redes: autopista, enlaces y calles de
+-- servicio con acceso restringido.
+MATCH (a:Interseccion)-[t:CONECTA_AUTO]->(b:Interseccion)
+WHERE NOT EXISTS { (a)~[:CONECTA_BICI]~(b) }
+RETURN t.calle AS calle, t.tipo AS tipo, t.largo_m AS largo_m
+ORDER BY largo_m DESC
+LIMIT 20

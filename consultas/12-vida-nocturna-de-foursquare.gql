@@ -1,0 +1,17 @@
+-- Vida nocturna según Foursquare, en calles con reclamos por ruido.
+-- OpenStreetMap casi no mapea bares en Chile: en Independencia tiene tres
+-- locales nocturnos en toda la comuna, y Overpass confirma que el dato no está
+-- en el mapa. La capa de Foursquare registra 26 en la misma comuna y 3264 en
+-- el Gran Santiago, así que para esta categoría es la fuente que sirve.
+-- El precio es que los venues no traen nombre y que los check-ins son de 2012,
+-- de modo que sitúan el fenómeno pero no identifican un local vigente.
+MATCH (v:Venue)-[:EN_CALLE]->(c:Calle)
+WHERE v.categoria IN ['Bar', 'Dive Bar', 'Pub', 'Nightclub', 'Brewery',
+                      'Beer Garden', 'Gay Bar', 'Gastropub', 'Rock Club',
+                      'Karaoke Bar', 'Lounge', 'Cocktail Bar', 'Sports Bar',
+                      'Wine Bar', 'Music Venue', 'Strip Club', 'Other Nightlife']
+  AND EXISTS { MATCH (r:Reclamo)-[:EN_CALLE]->(c) WHERE r.categoria = 'Ruido' }
+RETURN v.categoria AS categoria, v.checkins AS checkins,
+       c.nombre AS calle, c.comuna AS comuna
+ORDER BY checkins DESC
+LIMIT 20

@@ -1,0 +1,14 @@
+-- Locales donde se consume o se vende alcohol, en calles con reclamos por ruido.
+-- El filtro va por `categoria`, que combina el tag y su valor en una sola
+-- propiedad, porque los locales relevantes están repartidos en dos tags de OSM:
+-- `amenity` para los de consumo en el local y `shop=alcohol` para las
+-- botillerías, que en Chile son el vector más directo de ruido en la vía
+-- pública. Filtrar solo por `amenity` las dejaba fuera.
+-- EXISTS resuelve la pertenencia sin unir cada local con cada reclamo de su
+-- calle. La consulta 11 hace la misma pregunta contando los reclamos.
+MATCH (l:Lugar)-[:EN_CALLE]->(c:Calle)
+WHERE l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub',
+                      'amenity=restaurant', 'amenity=fast_food', 'shop=alcohol']
+  AND EXISTS { MATCH (r:Reclamo)-[:EN_CALLE]->(c) WHERE r.categoria = 'Ruido' }
+RETURN l.etiqueta AS lugar, l.categoria AS categoria, c.nombre AS calle, c.comuna AS comuna
+LIMIT 20
