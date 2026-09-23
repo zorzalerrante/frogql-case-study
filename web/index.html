@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consultas sobre Independencia</title>
+<script>
+  // Antes del primer pintado: si hay una elección guardada, mandarla al
+  // atributo que usan las variables de color.
+  try {
+    const guardado = localStorage.getItem("tema");
+    if (guardado) document.documentElement.dataset.tema = guardado;
+  } catch (e) { /* almacenamiento bloqueado: queda el tema del sistema */ }
+</script>
+<style>
+  :root {
+    --navy: #0A0E50;
+    --magenta: #CF3889;
+    --fondo: #fbfbfd;
+    --papel: #ffffff;
+    --texto: #16162a;
+    --tenue: #5b5b72;
+    --linea: #dcdce6;
+    --codigo: #f3f3f7;
+    --acento: var(--navy);
+    --mapa-red: #b9b9cb;
+    --lugar: #2a9d8f;
+    --reclamo: #e07a1f;
+    --venue: #6a5acd;
+    color-scheme: light dark;
+  }
+  /* El tema sigue al sistema hasta que el botón fija uno, y entonces manda el
+     atributo `data-tema`. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-tema="claro"]) {
+      --fondo: #0b0b14;
+      --papel: #14141f;
+      --texto: #e8e8f0;
+      --tenue: #9a9ab0;
+      --linea: #2a2a3c;
+      --codigo: #1c1c2a;
+      --acento: #8a8fd8;
+      --mapa-red: #3c3c55;
+      --lugar: #3fbfae;
+      --reclamo: #f09848;
+      --venue: #9c8cf0;
+      color-scheme: dark;
+    }
+  }
+  :root[data-tema="oscuro"] {
+      --fondo: #0b0b14;
+      --papel: #14141f;
+      --texto: #e8e8f0;
+      --tenue: #9a9ab0;
+      --linea: #2a2a3c;
+      --codigo: #1c1c2a;
+      --acento: #8a8fd8;
+      --mapa-red: #3c3c55;
+      --lugar: #3fbfae;
+      --reclamo: #f09848;
+      --venue: #9c8cf0;
+    color-scheme: dark;
+  }
+  :root[data-tema="claro"] { color-scheme: light; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 20px 16px 64px;
+    background: var(--fondo);
+    color: var(--texto);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .contenido { max-width: 860px; margin: 0 auto; }
+
+  header { border-bottom: 3px solid var(--acento); padding-bottom: 14px; }
+  .titular { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+  h1 { font-size: 1.45rem; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+  #tema {
+    flex: none; padding: 6px 10px; font-size: 0.95rem; line-height: 1;
+    border-radius: 999px; min-width: 2.2rem;
+  }
+  .bajada { margin: 0; color: var(--tenue); font-size: 0.92rem; }
+
+  .cifras {
+    display: flex; flex-wrap: wrap; gap: 6px 18px;
+    margin: 14px 0 0; padding: 0; list-style: none;
+    font-size: 0.8rem; color: var(--tenue);
+  }
+  .cifras b { color: var(--texto); font-variant-numeric: tabular-nums; }
+
+  .aviso {
+    margin: 16px 0 0; padding: 10px 12px;
+    border-left: 3px solid var(--magenta);
+    background: var(--codigo); border-radius: 0 6px 6px 0;
+    font-size: 0.85rem; color: var(--tenue);
+  }
+  .aviso code { color: var(--texto); }
+
+  .mapa {
+    position: sticky; top: 0; z-index: 2;
+    margin: 16px -16px 0; padding: 10px 16px 12px;
+    background: var(--fondo); border-bottom: 1px solid var(--linea);
+  }
+  .lienzo {
+    width: 100%; height: 38vh; min-height: 210px; max-height: 420px;
+    display: block; border-radius: 10px; background: var(--papel);
+    border: 1px solid var(--linea);
+    touch-action: none; cursor: grab;
+  }
+  .lienzo:active { cursor: grabbing; }
+  .modos { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 0; }
+  .modos button { padding: 5px 12px; font-size: 0.78rem; border-radius: 999px; }
+  .modos button[aria-pressed="true"] {
+    background: var(--acento); border-color: var(--acento); color: #fff;
+  }
+  .leyenda {
+    margin: 7px 0 0; font-size: 0.75rem; color: var(--tenue);
+    display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center;
+  }
+  .muestra {
+    display: inline-block; width: 14px; height: 3px; border-radius: 2px;
+    vertical-align: middle; margin-right: 5px; background: var(--magenta);
+  }
+  .modos .capa[aria-pressed="true"] { color: #fff; }
+  .modos .capa[data-capa="lugares"][aria-pressed="true"] {
+    background: var(--lugar); border-color: var(--lugar);
+  }
+  .modos .capa[data-capa="reclamos"][aria-pressed="true"] {
+    background: var(--reclamo); border-color: var(--reclamo);
+  }
+  .modos .capa[data-capa="venues"][aria-pressed="true"] {
+    background: var(--venue); border-color: var(--venue);
+  }
+  .capas { margin-top: 6px; }
+
+  .barra { display: flex; gap: 8px; align-items: center; margin: 20px 0 0; }
+  button {
+    font: inherit; font-size: 0.88rem; font-weight: 500;
+    padding: 8px 14px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--linea); background: var(--papel); color: var(--texto);
+  }
+  button:hover:not(:disabled) { border-color: var(--acento); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.principal { background: var(--acento); border-color: var(--acento); color: #fff; }
+  button.principal:hover:not(:disabled) { filter: brightness(1.12); }
+
+  .consulta {
+    margin: 14px 0 0; padding: 14px;
+    background: var(--papel); border: 1px solid var(--linea); border-radius: 10px;
+  }
+  .consulta.vacia { opacity: 0.6; }
+  .encabezado { display: flex; gap: 10px; align-items: baseline; }
+  .numero {
+    font-variant-numeric: tabular-nums; font-weight: 700; font-size: 0.78rem;
+    color: var(--magenta); padding-top: 2px;
+  }
+  h2 { font-size: 1rem; margin: 0; line-height: 1.35; font-weight: 600; }
+  .explicacion { margin: 8px 0 0; color: var(--tenue); font-size: 0.85rem; }
+
+
+  details { margin: 10px 0 0; }
+  summary {
+    cursor: pointer; font-size: 0.78rem; color: var(--acento);
+    font-weight: 500; list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸ "; }
+  details[open] summary::before { content: "▾ "; }
+  pre {
+    margin: 8px 0 0; padding: 10px; overflow-x: auto;
+    background: var(--codigo); border-radius: 6px;
+    font: 0.76rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .constante {
+    font: inherit; color: var(--magenta); background: transparent;
+    border: none; border-bottom: 1px dashed currentColor; border-radius: 0;
+    padding: 0 1px; cursor: pointer;
+  }
+  .constante:hover { background: color-mix(in srgb, var(--magenta) 18%, transparent); }
+  .editor {
+    width: 100%; margin: 8px 0 0; padding: 10px; resize: vertical;
+    min-height: 6rem; border: 1px solid var(--acento); border-radius: 6px;
+    background: var(--codigo); color: var(--texto);
+    font: 0.76rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .edicion { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin: 6px 0 0; }
+  .enlace {
+    border: none; background: none; padding: 0; border-radius: 0;
+    color: var(--acento); font-size: 0.78rem; text-decoration: underline;
+  }
+  .nota { font-size: 0.72rem; color: var(--tenue); }
+  .inspector {
+    margin: 10px 0 0; padding: 10px 12px; font-size: 0.8rem;
+    background: var(--codigo); border-left: 3px solid var(--magenta);
+    border-radius: 0 6px 6px 0;
+  }
+  .inspector h3 { margin: 0; font-size: 0.8rem; font-weight: 600; }
+  .inspector .nota { display: block; margin: 3px 0 0; }
+  .inspector dl {
+    display: grid; grid-template-columns: auto minmax(0, 1fr);
+    gap: 2px 12px; margin: 8px 0 0;
+  }
+  .inspector dt { color: var(--tenue); font-size: 0.75rem; }
+  .inspector dd { margin: 0; overflow-wrap: anywhere; }
+
+  .acciones { display: flex; gap: 10px; align-items: center; margin: 12px 0 0; }
+  .tiempo {
+    font: 0.78rem ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--tenue); font-variant-numeric: tabular-nums;
+  }
+  .tabla { margin: 12px 0 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; font-size: 0.8rem; white-space: nowrap; }
+  th, td { padding: 5px 12px 5px 0; text-align: left; }
+  th {
+    border-bottom: 1px solid var(--acento); font-weight: 600;
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  td { border-bottom: 1px solid var(--linea); font-variant-numeric: tabular-nums; }
+  td.largo { white-space: normal; min-width: 15rem; }
+  .sin-filas { margin: 12px 0 0; font-size: 0.82rem; color: var(--tenue); }
+
+  footer {
+    margin: 36px 0 0; padding-top: 14px; border-top: 1px solid var(--linea);
+    font-size: 0.78rem; color: var(--tenue);
+  }
+  footer code { font-size: 0.95em; }
+</style>
+</head>
+<body>
+<div class="contenido">
+  <header>
+    <div class="titular">
+      <h1>Consultas GQL sobre la comuna de Independencia</h1>
+      <button id="tema" type="button" title="Cambiar entre claro y oscuro" aria-label="Cambiar tema"></button>
+    </div>
+    <p class="bajada">
+      El grafo entero viaja al navegador y froGQL lo consulta acá, compilado a
+      WebAssembly. Sin servidor y sin conexión después de cargar.
+    </p>
+    <ul class="cifras" id="cifras"><li>Cargando el motor…</li></ul>
+  </header>
+
+  <div id="aviso"></div>
+
+  <section class="mapa">
+    <canvas id="lienzo" class="lienzo"></canvas>
+    <div class="modos" id="modos"></div>
+    <div class="modos capas" id="capas"></div>
+    <p class="leyenda" id="leyenda">
+      <span id="leyenda-modo"></span>
+      <span id="leyenda-destaque"><span class="muestra"></span>calles del resultado</span>
+      <span>Arrastra para mover, pellizca para acercar.</span>
+    </p>
+  </section>
+
+  <div class="barra">
+    <button id="correr-todas" class="principal" disabled>Correr todas</button>
+    <span class="tiempo" id="total"></span>
+  </div>
+
+  <main id="consultas"></main>
+
+  <footer>
+    Las doce consultas son los archivos <code>consultas/*.gql</code> del
+    repositorio, sin modificar. El grafo es <code>independencia.json</code>, la
+    misma entrada que usa <code>frogql.import_json</code> en Python.
+  </footer>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
