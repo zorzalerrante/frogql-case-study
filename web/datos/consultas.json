@@ -1,0 +1,86 @@
+[
+ {
+  "archivo": "01-lugares-en-la-misma-calle.gql",
+  "numero": "01",
+  "titulo": "Lugares que están en la misma calle que un reclamo dado",
+  "explicacion": "Es la consulta que motiva el modelo: con la calle reificada como nodo, \"misma calle\" son dos aristas, sin cálculo geométrico. Cambiar el identificador por el del reclamo que se quiera consultar.",
+  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)<-[:EN_CALLE]-(l:Lugar)\nWHERE r.reporte_id = '000050'\nRETURN c.nombre AS calle, c.comuna AS comuna, l.etiqueta AS lugar, l.categoria AS categoria"
+ },
+ {
+  "archivo": "02-ruido-por-calle.gql",
+  "numero": "02",
+  "titulo": "Calles con más reclamos por ruido",
+  "explicacion": "`GROUP BY c` agrupa por la identidad del nodo, no por su nombre: dos calles homónimas de comunas distintas son dos nodos y quedan separadas.",
+  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)\nWHERE r.categoria = 'Ruido'\nRETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, COUNT(r) AS reclamos\nGROUP BY c\nORDER BY reclamos DESC\nLIMIT 20"
+ },
+ {
+  "archivo": "03-locales-de-alcohol-en-calles-con-ruido.gql",
+  "numero": "03",
+  "titulo": "Locales donde se consume o se vende alcohol, en calles con reclamos por ruido",
+  "explicacion": "El filtro va por `categoria`, que combina el tag y su valor en una sola propiedad, porque los locales relevantes están repartidos en dos tags de OSM: `amenity` para los de consumo en el local y `shop=alcohol` para las botillerías, que en Chile son el vector más directo de ruido en la vía pública. Filtrar solo por `amenity` las dejaba fuera. EXISTS resuelve la pertenencia sin unir cada local con cada reclamo de su calle. La consulta 11 hace la misma pregunta contando los reclamos.",
+  "gql": "MATCH (l:Lugar)-[:EN_CALLE]->(c:Calle)\nWHERE l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub',\n                      'amenity=restaurant', 'amenity=fast_food', 'shop=alcohol']\n  AND EXISTS { MATCH (r:Reclamo)-[:EN_CALLE]->(c) WHERE r.categoria = 'Ruido' }\nRETURN l.etiqueta AS lugar, l.categoria AS categoria, c.nombre AS calle, c.comuna AS comuna\nLIMIT 20"
+ },
+ {
+  "archivo": "04-lugares-cercanos-al-ruido.gql",
+  "numero": "04",
+  "titulo": "Lugares con más reclamos por ruido a menos de 50 metros",
+  "explicacion": "CERCA_DE es proximidad geométrica, no pertenencia a la misma calle: un reclamo puede estar cerca de un lugar de la calle de atrás.",
+  "gql": "MATCH (r:Reclamo)-[:CERCA_DE]->(l:Lugar)\nWHERE r.categoria = 'Ruido'\nRETURN l.etiqueta AS lugar, l.categoria AS categoria, COUNT(r) AS reclamos\nGROUP BY l\nORDER BY reclamos DESC\nLIMIT 20"
+ },
+ {
+  "archivo": "05-calles-que-cruzan.gql",
+  "numero": "05",
+  "titulo": "Calles que cruzan una calle dada",
+  "explicacion": "CRUZA_CON se materializa desde las intersecciones compartidas y guarda en `esquinas` cuántas esquinas comparte el par.",
+  "gql": "MATCH (a:Calle)~[e:CRUZA_CON]~(b:Calle)\nWHERE a.nombre = 'Avenida Hipódromo Chile'\nRETURN b.nombre AS cruza_con, b.tipo AS tipo, e.esquinas AS esquinas\nORDER BY esquinas DESC\nLIMIT 20"
+ },
+ {
+  "archivo": "06-lugares-a-una-cuadra.gql",
+  "numero": "06",
+  "titulo": "Lugares en las calles que cruzan la calle de un reclamo",
+  "explicacion": "Extiende la consulta 01 un salto más: de la calle del reclamo a las calles que la cruzan, y de ahí a sus lugares.",
+  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)~[:CRUZA_CON]~(d:Calle)<-[:EN_CALLE]-(l:Lugar)\nWHERE r.reporte_id = '000050'\nRETURN d.nombre AS calle_vecina, l.etiqueta AS lugar, l.categoria AS categoria\nLIMIT 20"
+ },
+ {
+  "archivo": "07-barreras-modales.gql",
+  "numero": "07",
+  "titulo": "Tramos por los que circula un auto y no una bicicleta",
+  "explicacion": "Son los bordes que separan las redes: autopista, enlaces y calles de servicio con acceso restringido.",
+  "gql": "MATCH (a:Interseccion)-[t:CONECTA_AUTO]->(b:Interseccion)\nWHERE NOT EXISTS { (a)~[:CONECTA_BICI]~(b) }\nRETURN t.calle AS calle, t.tipo AS tipo, t.largo_m AS largo_m\nORDER BY largo_m DESC\nLIMIT 20"
+ },
+ {
+  "archivo": "08-ruido-por-zona-censal.gql",
+  "numero": "08",
+  "titulo": "Reclamos por ruido y población de cada zona censal",
+  "explicacion": "Cruza el reporte ciudadano con el Censo 2024 sin salir del grafo.",
+  "gql": "MATCH (r:Reclamo)-[:EN_ZONA]->(z:ZonaCensal)\nWHERE r.categoria = 'Ruido'\nRETURN z.zona_id AS zona, z.comuna AS comuna, z.n_per AS poblacion,\n       z.n_hog_unipersonales AS hogares_unipersonales, COUNT(r) AS reclamos\nGROUP BY z\nORDER BY reclamos DESC\nLIMIT 20"
+ },
+ {
+  "archivo": "09-calles-sin-lugares.gql",
+  "numero": "09",
+  "titulo": "Calles con reclamos por ruido y sin ningún lugar registrado en OSM",
+  "explicacion": "Mide dónde el mapa colaborativo está menos completo que el reporte ciudadano: hay actividad suficiente para reclamar y no hay POI mapeados.",
+  "gql": "MATCH (c:Calle)\nWHERE EXISTS { (:Reclamo)-[:EN_CALLE]->(c) }\n  AND NOT EXISTS { (:Lugar)-[:EN_CALLE]->(c) }\nRETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, c.largo_m AS largo_m\nORDER BY largo_m DESC\nLIMIT 20"
+ },
+ {
+  "archivo": "10-origen-de-la-asignacion.gql",
+  "numero": "10",
+  "titulo": "Cómo se asignó cada lugar a su calle",
+  "explicacion": "`declarada` viene del tag addr:street del propio lugar; `cercania` es el eje con nombre más próximo. La distinción queda en el grafo para que cualquier consulta pueda descartar las asignaciones menos confiables.",
+  "gql": "MATCH (l:Lugar)-[e:EN_CALLE]->(c:Calle)\nRETURN e.origen AS origen, COUNT(l) AS lugares\nGROUP BY e.origen\nORDER BY lugares DESC"
+ },
+ {
+  "archivo": "11-reclamos-de-ruido-por-local.gql",
+  "numero": "11",
+  "titulo": "Cuántos reclamos por ruido tiene la calle de cada local con alcohol",
+  "explicacion": "`GROUP BY l, c` agrupa por la identidad de los nodos, así que dos locales que comparten nombre no suman sus reclamos. Es la consulta más cara del conjunto. Contar exige unir cada local con cada reclamo de su calle, y en una avenida con mil reclamos y cien locales eso son cien mil filas antes de agrupar. La consulta 03 responde la versión sin conteo con EXISTS y no paga ese producto.",
+  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)<-[:EN_CALLE]-(l:Lugar)\nWHERE r.categoria = 'Ruido'\n  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub',\n                      'amenity=restaurant', 'amenity=fast_food', 'shop=alcohol']\nRETURN l.etiqueta AS lugar, l.categoria AS categoria, c.nombre AS calle, c.comuna AS comuna,\n       COUNT(r) AS reclamos_en_la_calle\nGROUP BY l, c\nORDER BY reclamos_en_la_calle DESC\nLIMIT 20"
+ },
+ {
+  "archivo": "12-vida-nocturna-de-foursquare.gql",
+  "numero": "12",
+  "titulo": "Vida nocturna según Foursquare, en calles con reclamos por ruido",
+  "explicacion": "OpenStreetMap casi no mapea bares en Chile: en Independencia tiene tres locales nocturnos en toda la comuna, y Overpass confirma que el dato no está en el mapa. La capa de Foursquare registra 26 en la misma comuna y 3264 en el Gran Santiago, así que para esta categoría es la fuente que sirve. El precio es que los venues no traen nombre y que los check-ins son de 2012, de modo que sitúan el fenómeno pero no identifican un local vigente.",
+  "gql": "MATCH (v:Venue)-[:EN_CALLE]->(c:Calle)\nWHERE v.categoria IN ['Bar', 'Dive Bar', 'Pub', 'Nightclub', 'Brewery',\n                      'Beer Garden', 'Gay Bar', 'Gastropub', 'Rock Club',\n                      'Karaoke Bar', 'Lounge', 'Cocktail Bar', 'Sports Bar',\n                      'Wine Bar', 'Music Venue', 'Strip Club', 'Other Nightlife']\n  AND EXISTS { MATCH (r:Reclamo)-[:EN_CALLE]->(c) WHERE r.categoria = 'Ruido' }\nRETURN v.categoria AS categoria, v.checkins AS checkins,\n       c.nombre AS calle, c.comuna AS comuna\nORDER BY checkins DESC\nLIMIT 20"
+ }
+]

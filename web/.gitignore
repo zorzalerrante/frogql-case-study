@@ -1,3 +1,4 @@
-vendor/
-datos/
+# `datos/` está excluido en la raíz del repositorio, para los datos intermedios
+# del pipeline. Acá adentro es distinto: es lo que GitHub Pages publica.
+!/datos/
 .playwright-mcp/

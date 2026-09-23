@@ -155,10 +155,13 @@ uv run python web/preparar-web.py
 cd web && python3 -m http.server 8000
 ```
 
-`.github/workflows/pages.yml` publica la página en GitHub Pages. Construye el
-sitio en el runner, corriendo `01`, `02` y `preparar-web.py`, en vez de
-versionar el JSON y el motor: así el grafo publicado no envejece en git
-mientras OpenStreetMap cambia. El extracto PBF queda en caché por mes.
+`.github/workflows/pages.yml` publica la página en GitHub Pages copiando `web/`
+tal cual, sin construir nada. Por eso el grafo, el motor y las consultas están
+versionados en `web/datos/` y `web/vendor/`, que es la excepción a la regla de
+no versionar lo generado: publicar toma segundos y no depende de que respondan
+los servidores de OpenStreetMap ni los del curso. La contraparte es que hay que
+correr `preparar-web.py` y commitear el resultado cuando cambie el grafo, la
+versión del motor o una consulta.
 
 Dos restricciones del motor en el navegador condicionan la página. No hay
 sistema de archivos, así que la entrada es el JSON y no el `.gdb`. Y el backend

@@ -1,7 +1,10 @@
 """Prepara los assets del visualizador de `web/`.
 
-Tres cosas que no se versionan y que salen de otra parte del repositorio o de
-npm:
+Tres cosas que salen de otra parte del repositorio o de npm y que sí se
+versionan, a diferencia de `datos/` y `salida/`. Son la única forma de que
+GitHub Pages sirva el sitio sin construirlo: publicar es copiar `web/`.
+Hay que volver a correr este script, y commitear lo que cambie, cuando se
+reconstruya el grafo, se suba la versión del motor o se edite una consulta:
 
 - `vendor/`: el motor froGQL compilado a WebAssembly, bajado del paquete npm
   `frogql-wasm`. El navegador no tiene sistema de archivos, así que el binding
@@ -131,5 +134,7 @@ if __name__ == "__main__":
     print(
         "\nListo. Para servir la página:\n"
         "  cd web && python3 -m http.server 8000\n"
-        "y abrir http://localhost:8000"
+        "y abrir http://localhost:8000\n"
+        "\nLo que cambie en web/datos/ y web/vendor/ hay que commitearlo: "
+        "GitHub Pages\npublica el directorio tal cual, sin construir nada."
     )

@@ -1,12 +1,12 @@
 # Publica el visualizador de `web/` en GitHub Pages.
 #
-# El sitio se construye acá y no se versiona: el grafo y el motor son
-# resultados de correr el pipeline, igual que `datos/` y `salida/`. Eso
-# mantiene el criterio del repositorio, que todo se descargue de lo publicado,
-# y evita que el JSON quede viejo en git mientras OpenStreetMap cambia.
+# El sitio se sube tal cual está en el repositorio, sin construir nada: el
+# grafo, el motor y las consultas viven versionados en `web/datos/` y
+# `web/vendor/`. Publicar toma segundos y no depende de que respondan los
+# servidores de OpenStreetMap ni los del curso.
 #
-# La comuna de Independencia tarda alrededor de un minuto. El Gran Santiago no
-# entra: su JSON pesa 402 MB y el motor del navegador es en RAM.
+# Cuando cambie el grafo, la versión del motor o alguna consulta, hay que
+# correr `uv run python web/preparar-web.py` y commitear el resultado.
 name: Publicar el visualizador
 
 on:
@@ -14,12 +14,6 @@ on:
     branches: [main]
     paths:
       - "web/**"
-      - "consultas/**"
-      - "redosm/**"
-      - "01-preparar-datos.py"
-      - "02-caso-estudio.py"
-      - "pyproject.toml"
-      - "uv.lock"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -34,48 +28,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  construir:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      # El extracto PBF de Santiago son 39 MB. Se guarda por mes: evita bajarlo
-      # en cada publicación y deja que el mapa siga a OpenStreetMap, que cambia.
-      - id: mes
-        run: echo "clave=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
-
-      - name: Recuperar el extracto de OpenStreetMap
-        uses: actions/cache@v4
-        with:
-          path: datos/_quackosm
-          key: quackosm-${{ runner.os }}-${{ steps.mes.outputs.clave }}
-
-      - name: Instalar las dependencias
-        run: uv sync --frozen
-
-      - name: Descargar las capas de Independencia
-        run: uv run python 01-preparar-datos.py
-
-      - name: Construir y exportar el grafo
-        run: uv run python 02-caso-estudio.py
-
-      - name: Preparar los assets de la página
-        run: uv run python web/preparar-web.py
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: web
-
   publicar:
-    needs: construir
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.despliegue.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
       - id: despliegue
         uses: actions/deploy-pages@v4
