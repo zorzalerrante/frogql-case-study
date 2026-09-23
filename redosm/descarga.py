@@ -101,12 +101,22 @@ def _cpus() -> int:
     return max(1, mp.cpu_count() // 2)
 
 
+# Proveedores del extracto PBF, en orden de preferencia. Sin esto quackosm usa
+# `any`, que consulta los cuatro índices y se queda con el extracto más chico
+# entre los que alcanzó a cargar: cuando el índice de BBBike no responde, la
+# misma orden baja Chile entero en vez de la ciudad. Fijarlos hace la descarga
+# reproducible y mantiene Geofabrik como respaldo para un área fuera de
+# Santiago, que el extracto de BBBike no cubriría.
+FUENTES_EXTRACTO = ["BBBike", "Geofabrik"]
+
+
 def _extraer(geometria, tags_filter) -> gpd.GeoDataFrame:
     config.DIR_CACHE_OSM.mkdir(parents=True, exist_ok=True)
     return qosm.convert_geometry_to_geodataframe(
         geometry_filter=geometria,
         tags_filter=tags_filter,
         working_directory=config.DIR_CACHE_OSM,
+        osm_extract_source=FUENTES_EXTRACTO,
         verbosity_mode="transient",
         keep_all_tags=True,
         explode_tags=True,
