@@ -1,10 +1,10 @@
 ## {.statement}
 
-Una base de datos que cabe en menos de un megabyte, viaja dentro de la página web y responde en milisegundos preguntas que a una planilla le toman medio mapa.
+Una base de datos de 768 kilobytes que se descarga con la página web, funciona sin conexión y responde en milisegundos.
 
-Está hecha en Chile y pueden probarla desde sus teléfonos en los próximos diez minutos.
+Está hecha en Chile. Pueden probarla desde sus teléfonos en los próximos diez minutos.
 
-## Hay preguntas que nadie hace porque responderlas cuesta caro
+## Hay preguntas que no se hacen porque responderlas toma demasiado trabajo
 
 ::: columns
 :::: {.column width="52%"}
@@ -17,7 +17,7 @@ La pregunta que sigue es obvia para cualquiera que viva ahí: **qué hay en esa 
 :::: {.column width="48%"}
 Con una planilla hay que medir la distancia de cada punto del mapa a cada calle y decidir a mano cuánto es "cerca". De nuevo para cada pregunta.
 
-Preguntar cuesta tanto que la pregunta se deja de hacer.
+El trabajo es tanto que la pregunta se deja de hacer.
 ::::
 :::
 
@@ -25,11 +25,11 @@ Preguntar cuesta tanto que la pregunta se deja de hacer.
 
 ::: columns
 :::: {.column width="46%"}
-La calle pasa a ser una cosa en la base de datos, con reclamos y locales colgando de ella.
+La calle es un dato más de la base, y cada reclamo y cada local guardan a qué calle pertenecen.
 
-"Qué hay en esta calle" se responde siguiendo dos flechas. Sin medir distancias y sin decidir qué es cerca.
+Para saber qué hay en una calle, la base sigue esas dos flechas. No mide distancias y no decide qué es cerca.
 
-La respuesta ya está guardada en la forma de los datos.
+La relación ya está guardada y no se calcula en el momento.
 ::::
 :::: {.column width="54%"}
 ```{.dot width="100%"}
@@ -73,9 +73,9 @@ Escaneen y consulten su propia calle. Funciona aunque apaguen los datos.
 | En responder | 3 ms |
 ::::
 :::: {.column width="50%"}
-La base entera pesa menos que una foto del teléfono, y responde en menos tiempo del que dura un parpadeo.
+Los 768 kilobytes se descargaron una vez y quedaron en el teléfono.
 
-Nada de esto viajó a un servidor. Bajó una vez y quedó en el aparato.
+Las consultas se resolvieron ahí mismo. Ningún dato salió del aparato.
 ::::
 :::
 
@@ -98,20 +98,20 @@ La misma consulta sobre el Gran Santiago entero, cien veces más grande, tarda l
 
 ::: columns
 :::: {.column width="52%"}
-La misma historia, una pregunta más allá:
+La misma historia, con una pregunta más:
 
 > ¿Qué botillerías y bares hay a una o dos cuadras del reclamo?
 
 froGQL responde en **42 milisegundos** con 20 locales. El primero es la Botillería Víctor, en Lastra, a una cuadra.
 ::::
 :::: {.column width="48%"}
-Todo el peso lo lleva el pedazo que dice "una o dos cuadras":
+La parte que dice "una o dos cuadras" es esta:
 
 `{1,2}`
 
-En SQL hay que escribir una consulta que se llama a sí misma, juntar los resultados de cada nivel y decidir a mano dónde parar.
+En SQL hace falta una consulta que se llama a sí misma, juntar los resultados de cada nivel y escribir a mano dónde parar.
 
-Cambiar dos cuadras por cinco: acá es cambiar un número.
+Para preguntar por cinco cuadras en vez de dos, acá se cambia un número.
 ::::
 :::
 
@@ -131,7 +131,7 @@ Cambiar dos cuadras por cinco: acá es cambiar un número.
 ::::
 :::
 
-La base viaja dentro de la aplicación, así que la aplicación sigue respondiendo cuando la red falla.
+La base queda dentro de la aplicación, así que la aplicación responde aunque la red falle.
 
 ## froGQL en una lámina {.smaller}
 
@@ -139,14 +139,14 @@ La base viaja dentro de la aplicación, así que la aplicación sigue respondien
 :::: {.column width="50%"}
 **Qué es.** Un motor de bases de datos de grafos hecho en Chile, en el Departamento de Ciencias de la Computación de la Universidad de Chile.
 
-Habla GQL, el lenguaje de consulta de grafos que ISO aprobó en 2024. Es el primer estándar nuevo de este tipo desde SQL.
+Usa GQL, el lenguaje de consulta de grafos que ISO aprobó en 2024. Es el primer estándar nuevo de este tipo desde SQL.
 
 La base es un archivo. No hay servidor que instalar ni que administrar.
 ::::
 :::: {.column width="50%"}
 **Dónde corre.** Desde Python, desde JavaScript, desde la línea de comandos y dentro del navegador, compilada a WebAssembly, que es lo que le permite correr en el teléfono de cada uno de ustedes.
 
-**Qué no es.** Un reemplazo para las bases gigantes repartidas en muchos servidores. Sirve cuando los datos caben en el aparato de quien pregunta, que es casi siempre.
+**Qué no es.** Un reemplazo para las bases gigantes repartidas en muchos servidores. Sirve cuando los datos caben en el aparato de quien pregunta.
 ::::
 :::
 
