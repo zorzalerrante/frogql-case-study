@@ -25,6 +25,9 @@ const COLUMNAS_NO_UBICABLES = new Set(["comuna", "categoria", "tipo", "origen", 
 // Las coordenadas son identificadores y no cantidades: separarlas por miles y
 // redondearlas a tres decimales las vuelve otra cosa.
 const SIN_FORMATO = new Set(["lon", "lat"]);
+// Largo del relato de un reclamo en la tarjeta del mapa. Los de SOSAFE llegan a
+// varios renglones y taparían el mapa.
+const LARGO_RELATO = 130;
 
 const $ = (id) => document.getElementById(id);
 
@@ -340,7 +343,49 @@ async function arrancar() {
     venue: estilo.getPropertyValue("--venue").trim(),
   });
   const colores = leerColores(estilo);
-  const mapa = crearMapa($("lienzo"), conexion, colores);
+  // Al tocar un punto del mapa se muestra qué es, sobre el mismo punto.
+  const tarjeta = $("tarjeta");
+  const mostrarPunto = (tocado) => {
+    if (!tocado) {
+      tarjeta.hidden = true;
+      return;
+    }
+    const { punto, x, y } = tocado;
+    const titulo = document.createElement("b");
+    titulo.textContent = punto.titulo ?? punto.clave;
+
+    const partes = [];
+    if (punto.capa === "lugares") partes.push(punto.detalle, punto.calle);
+    if (punto.capa === "reclamos") partes.push(`reclamo ${punto.clave}`, punto.fecha);
+    if (punto.capa === "venues") {
+      partes.push("Foursquare", contar(punto.checkins ?? 0, "visita", "visitas"));
+    }
+    const detalle = document.createElement("span");
+    detalle.textContent = partes.filter(Boolean).join(" · ");
+    tarjeta.replaceChildren(titulo, detalle);
+
+    if (punto.texto) {
+      const cita = document.createElement("span");
+      cita.className = "cita";
+      const relato = punto.texto.trim();
+      cita.textContent =
+        relato.length > LARGO_RELATO
+          ? `"${relato.slice(0, LARGO_RELATO).trimEnd()}…"`
+          : `"${relato}"`;
+      tarjeta.append(cita);
+    }
+
+    tarjeta.hidden = false;
+    // La tarjeta se ancla al punto y se mantiene dentro del mapa.
+    const caja = tarjeta.parentElement.getBoundingClientRect();
+    const propia = tarjeta.getBoundingClientRect();
+    const izquierda = Math.min(Math.max(8, x + 12), caja.width - propia.width - 8);
+    const arriba = y + propia.height + 20 > caja.height ? y - propia.height - 12 : y + 12;
+    tarjeta.style.left = `${izquierda}px`;
+    tarjeta.style.top = `${Math.max(8, arriba)}px`;
+  };
+
+  const mapa = crearMapa($("lienzo"), conexion, colores, mostrarPunto);
 
   // El canvas no hereda los colores del tema, así que hay que repintarlo.
   const repintar = () => {

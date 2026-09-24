@@ -22,14 +22,29 @@ const MODOS = {
 const CAPAS = {
   lugares: {
     etiqueta: "Lugares",
-    nodo: "Lugar",
-    clave: "etiqueta",
-    // Identificador propio, para poder pegarle su calle.
-    calle: "osm_id",
     color: "lugar",
+    // `ref` es el identificador propio, que sirve para pegarle su calle.
+    consulta:
+      "MATCH (n:Lugar) RETURN n.lon AS x, n.lat AS y, n.etiqueta AS clave, " +
+      "n.osm_id AS ref, n.categoria AS detalle",
+    conCalle: "MATCH (n:Lugar)-[:EN_CALLE]->(c:Calle) RETURN n.osm_id AS ref, c.nombre AS calle",
   },
-  reclamos: { etiqueta: "Reclamos", nodo: "Reclamo", clave: "reporte_id", color: "reclamo" },
-  venues: { etiqueta: "Venues", nodo: "Venue", clave: "venue_id", color: "venue" },
+  reclamos: {
+    etiqueta: "Reclamos",
+    color: "reclamo",
+    consulta:
+      "MATCH (n:Reclamo) RETURN n.lon AS x, n.lat AS y, n.reporte_id AS clave, " +
+      "n.categoria AS titulo, n.fecha AS fecha, n.descripcion AS texto",
+  },
+  venues: {
+    etiqueta: "Venues",
+    color: "venue",
+    // Los venues de Foursquare no traen nombre, así que el título es su
+    // categoría y el identificador no se muestra.
+    consulta:
+      "MATCH (n:Venue) RETURN n.lon AS x, n.lat AS y, n.venue_id AS clave, " +
+      "n.categoria AS titulo, n.checkins AS checkins",
+  },
 };
 
 const ZOOM_MAX = 40;
@@ -59,35 +74,25 @@ function tramosDe(conexion, arista) {
   return tramos;
 }
 
-/** Lee los puntos de una capa con su clave de identificación.
+/** Lee los puntos de una capa con lo que hace falta para mostrarlos.
  *
  * Los lugares llevan además la calle a la que pertenecen. Su etiqueta no los
  * identifica: en la comuna hay 37 nombres compartidos por 105 lugares, entre
- * ellos nueve parques sin nombre y siete Copec. La calle sirve para separar a
- * los homónimos cuando el resultado de una consulta la nombra.
+ * ellos nueve parques sin nombre y siete Copec. La calle separa a los
+ * homónimos cuando el resultado de una consulta la nombra.
  */
-function puntosDe(conexion, capa) {
-  const puntos = conexion.execute(
-    `MATCH (n:${capa.nodo}) ` +
-      `RETURN n.lon AS x, n.lat AS y, n.${capa.clave} AS clave` +
-      (capa.calle ? `, n.${capa.calle} AS ref` : ""),
-    0,
-  );
-  if (!capa.calle) return puntos;
+function puntosDe(conexion, nombre, capa) {
+  const puntos = conexion.execute(capa.consulta, 0);
+  for (const p of puntos) p.capa = nombre;
+  if (!capa.conCalle) return puntos;
 
   const calles = new Map();
-  for (const f of conexion.execute(
-    `MATCH (n:${capa.nodo})-[:EN_CALLE]->(c:Calle) ` +
-      `RETURN n.${capa.calle} AS ref, c.nombre AS calle`,
-    0,
-  )) {
-    calles.set(f.ref, f.calle);
-  }
+  for (const f of conexion.execute(capa.conCalle, 0)) calles.set(f.ref, f.calle);
   for (const p of puntos) p.calle = calles.get(p.ref);
   return puntos;
 }
 
-export function crearMapa(canvas, conexion, colores) {
+export function crearMapa(canvas, conexion, colores, alTocar) {
   const redes = {};
   for (const [nombre, modo] of Object.entries(MODOS)) {
     redes[nombre] = tramosDe(conexion, modo.arista);
@@ -95,16 +100,19 @@ export function crearMapa(canvas, conexion, colores) {
 
   const capas = {};
   const visibles = new Set();
+  // Para volver de una coordenada al punto que la ocupa, al tocar el mapa.
+  const porCoordenada = new Map();
   // Un punto se puede nombrar de varias formas y un nombre puede repetirse
   // entre lugares, así que el índice guarda listas.
   const porClave = new Map();
   for (const [nombre, capa] of Object.entries(CAPAS)) {
-    capas[nombre] = puntosDe(conexion, capa);
+    capas[nombre] = puntosDe(conexion, nombre, capa);
     for (const punto of capas[nombre]) {
+      porCoordenada.set(`${punto.x},${punto.y}`, punto);
       if (typeof punto.clave !== "string") continue;
       const llave = punto.clave.toLowerCase();
       if (!porClave.has(llave)) porClave.set(llave, []);
-      porClave.get(llave).push({ ...punto, capa: nombre });
+      porClave.get(llave).push(punto);
     }
   }
 
@@ -230,9 +238,22 @@ export function crearMapa(canvas, conexion, colores) {
   const punteros = new Map();
   let pellizco = null;
 
+  // Un toque es un puntero que se levanta cerca de donde bajó. Más lejos que
+  // esto ya fue un arrastre del mapa.
+  const TOLERANCIA_TOQUE = 6;
+  // Radio en pantalla para decidir qué punto se tocó.
+  const RADIO_TOQUE = 14;
+  let partida = null;
+
   canvas.addEventListener("pointerdown", (e) => {
-    canvas.setPointerCapture(e.pointerId);
+    // La captura falla si el puntero ya se soltó, y no es motivo para cortar.
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch (error) {
+      /* sin captura: el arrastre igual funciona mientras el puntero esté encima */
+    }
     punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    partida = punteros.size === 1 ? { x: e.clientX, y: e.clientY } : null;
     pellizco = null;
   });
 
@@ -258,9 +279,40 @@ export function crearMapa(canvas, conexion, colores) {
     dibujar();
   });
 
+  /** El punto dibujado más cercano a un lugar de la pantalla. */
+  function puntoEn(clienteX, clienteY) {
+    const caja = canvas.getBoundingClientRect();
+    const px = clienteX - caja.left;
+    const py = clienteY - caja.top;
+
+    const candidatos = [];
+    for (const nombre of visibles) candidatos.push(...capas[nombre]);
+    // Los destacados se dibujan aunque su capa esté apagada.
+    for (const d of puntosDestacados) {
+      const punto = porCoordenada.get(`${d.x},${d.y}`);
+      if (punto) candidatos.push(punto);
+    }
+
+    let cerca = null;
+    let menor = RADIO_TOQUE;
+    for (const punto of candidatos) {
+      const [x, y] = proyectar(punto.x, punto.y);
+      const distancia = Math.hypot(x - px, y - py);
+      if (distancia < menor) {
+        menor = distancia;
+        cerca = { punto, x, y };
+      }
+    }
+    return cerca;
+  }
+
   const soltar = (e) => {
+    const era = partida;
     punteros.delete(e.pointerId);
     if (punteros.size < 2) pellizco = null;
+    if (punteros.size || !era || !alTocar) return;
+    if (Math.hypot(e.clientX - era.x, e.clientY - era.y) > TOLERANCIA_TOQUE) return;
+    alTocar(puntoEn(e.clientX, e.clientY));
   };
   canvas.addEventListener("pointerup", soltar);
   canvas.addEventListener("pointercancel", soltar);

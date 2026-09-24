@@ -100,9 +100,21 @@
 
   .mapa {
     position: sticky; top: 0; z-index: 2;
+    /* La tarjeta del punto tocado se ubica respecto de este bloque. */
     margin: 16px -16px 0; padding: 10px 16px 12px;
     background: var(--fondo); border-bottom: 1px solid var(--linea);
   }
+  .marco { position: relative; }
+  .tarjeta {
+    position: absolute; z-index: 3; max-width: min(17rem, 78%);
+    padding: 8px 10px; font-size: 0.78rem; line-height: 1.35;
+    background: var(--papel); color: var(--texto);
+    border: 1px solid var(--acento); border-radius: 8px;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.16);
+  }
+  .tarjeta b { display: block; font-size: 0.84rem; }
+  .tarjeta span { color: var(--tenue); }
+  .tarjeta .cita { display: block; margin-top: 4px; font-style: italic; }
   .lienzo {
     width: 100%; height: 38vh; min-height: 210px; max-height: 420px;
     display: block; border-radius: 10px; background: var(--papel);
@@ -246,13 +258,16 @@
   <div id="aviso"></div>
 
   <section class="mapa">
-    <canvas id="lienzo" class="lienzo"></canvas>
+    <div class="marco">
+      <canvas id="lienzo" class="lienzo"></canvas>
+      <div id="tarjeta" class="tarjeta" hidden></div>
+    </div>
     <div class="modos" id="modos"></div>
     <div class="modos capas" id="capas"></div>
     <p class="leyenda" id="leyenda">
       <span id="leyenda-modo"></span>
       <span id="leyenda-destaque"><span class="muestra"></span>calles del resultado</span>
-      <span>Arrastra para mover, pellizca para acercar.</span>
+      <span>Arrastra para mover, pellizca para acercar, toca un punto para ver qué es.</span>
     </p>
   </section>
 
