@@ -1,4 +1,4 @@
-# {.statement}
+## {.statement}
 
 Una base de datos que cabe en menos de un megabyte, viaja dentro de la página web y responde en milisegundos preguntas que a una planilla le toman medio mapa.
 
