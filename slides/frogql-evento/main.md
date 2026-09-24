@@ -105,7 +105,7 @@ La misma consulta sobre el Gran Santiago entero, cien veces más grande, tarda l
 :::: {.column width="52%"}
 La misma historia, con una pregunta más:
 
-> ¿Qué botillerías y bares hay a una o dos cuadras del reclamo?
+> Con tanto ruido me dio sed... ¿qué botillerías y bares hay a una o dos cuadras?
 
 froGQL responde en **42 milisegundos** con 20 locales. El primero es la Botillería Víctor, en Lastra, a una cuadra.
 ::::
