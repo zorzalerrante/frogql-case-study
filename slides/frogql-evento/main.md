@@ -137,7 +137,7 @@ La base viaja dentro de la aplicación, así que la aplicación sigue respondien
 
 ::: columns
 :::: {.column width="50%"}
-**Qué es.** Un motor de bases de datos de grafos hecho en Chile, en el laboratorio Pleiad del Departamento de Ciencias de la Computación de la Universidad de Chile.
+**Qué es.** Un motor de bases de datos de grafos hecho en Chile, en el Departamento de Ciencias de la Computación de la Universidad de Chile.
 
 Habla GQL, el lenguaje de consulta de grafos que ISO aprobó en 2024. Es el primer estándar nuevo de este tipo desde SQL.
 
