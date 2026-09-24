@@ -4,7 +4,7 @@ PREPARAR := preparar-figuras.py
 main.pdf: main.md head.yaml img
 	panduck build -p slides
 
-img: $(PREPARAR) pantalla.png
+img: $(PREPARAR) $(wildcard capturas/*.png)
 	cd ../.. && uv run --with segno python slides/frogql-evento/preparar-figuras.py
 	@touch img
 

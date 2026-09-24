@@ -1,10 +1,10 @@
 ---
 title: "froGQL"
-subtitle: "Una base de datos de grafos que cabe en tu teléfono"
+subtitle: "Una base de datos de grafos que corre en el navegador"
 author:
   - "Departamento de Ciencias de la Computación, Universidad de Chile"
 date: "2026"
 footer: "froGQL $\\cdot$ zorzalerrante.github.io/frogql-case-study"
 mainfont: "Urbanist"
-title-image: "img/pantalla.png"
+title-image: "img/escritorio-01.png"
 ---

@@ -181,11 +181,34 @@ enciende en el mapa. El vínculo se apoya en que los `.gql` del repositorio
 escriben sus constantes como `variable.propiedad = 'valor'` o `IN [...]` y
 declaran la etiqueta en el patrón, así que al editar el texto desaparece.
 
-`web/mapa.js` dibuja la red vial sobre canvas y enciende lo que nombra cada
-resultado. La geometría también sale de consultar el grafo: los tramos son
+`web/grafo.js` lee del grafo la red por modo y las capas de puntos, encuentra
+las constantes de cada consulta y ubica en el mapa lo que nombra un resultado.
+Lo usan las dos páginas. `web/mapa.js` dibuja esa red sobre canvas y enciende
+lo que nombra cada resultado. La geometría también sale de consultar el grafo: los tramos son
 pares de intersecciones con `lon` y `lat`, y las tres capas de puntos son los
 `Lugar`, `Reclamo` y `Venue`. Como el grafo no guarda la geometría intermedia
 de cada way, una curva larga se dibuja como cuerda.
+
+`web/prototipo/` hace lo mismo con estética de aplicación: mapa base de CARTO
+en MapLibre, capas de deck.gl, bloques de HUD numerados, la consulta en una
+ventana y "Acerca de" en un modal, con Space Grotesk. Tampoco tiene build:
+MapLibre 4.7 y deck.gl 9.0 (bundle UMD) vienen de jsDelivr, y el grafo, el
+motor y las consultas se leen de `../datos/` y `../vendor/`, así que
+`preparar-web.py` alimenta las dos páginas. `tinte.js` entinta el estilo de
+CARTO con los tonos del tema.
+
+En el prototipo las consultas no se editan: `parametros.js` convierte cada
+constante (`= 'x'`, `IN [...]`) y cada `LIMIT` en un parámetro, y la ventana
+los muestra como controles cuyos valores posibles salen del grafo. Cada cambio
+vuelve a correr la consulta. Un parámetro sobre un identificador con capa de
+puntos (`Reclamo.reporte_id`) o sobre `Calle.nombre` también se llena tocando
+el mapa, y al tocar un elemento sin consulta que lo reciba la lectura ofrece
+las consultas que lo aceptan. Tocar una fila del resultado la enciende en el
+mapa. Depende de la misma convención de escritura de los `.gql` que el
+vínculo de constantes de la otra página.
+
+En pantallas de menos de 700 px el prototipo pierde las capas de puntos y
+"Correr todas", y la lista y la ventana pasan a hojas inferiores.
 
 ## Slides
 
@@ -194,6 +217,16 @@ grafica desde `salida/<área>/tiempos-consultas.csv` y
 `salida/<área>/resumen-grafo.csv`, que escriben `03` y `02`, así que las cifras
 del deck son las de la última corrida. Al cambiar esas salidas hay que revisar
 el script de figuras.
+
+`slides/frogql-evento/` es el deck para público general, que remite al
+prototipo con un QR. `preparar-figuras.py` hace el QR y tres mapas con
+chiricoca a partir de `web/datos/independencia.json`, así que no necesita
+correr el pipeline; `capturar-prototipo.py` rehace con Playwright las capturas
+de `capturas/`, que se versionan, e imprime los tiempos que mide la página. El
+deck trae Urbanist y Fira Code en `fonts/`, con sus licencias OFL: panduck le
+pasa a typst el `fonts/` que está junto al documento y los mapas registran
+Urbanist desde ahí, así que compila igual en una máquina que no las tenga
+instaladas.
 
 Las tablas del README traen las cifras de las dos escalas. Si un cambio altera
 conteos, tiempos o tamaños, corresponde actualizarlas con los valores de una
