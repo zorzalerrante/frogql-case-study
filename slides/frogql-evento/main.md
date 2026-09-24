@@ -58,7 +58,7 @@ La base ya sabe a qué calle pertenece cada uno. Responder es seguir dos flechas
 :::: {.column width="52%"}
 ![](img/qr.png){width="40%"}
 
-Escaneen y consulten su propia calle. Funciona aunque apaguen los datos.
+Escaneen y prueben. La base es la comuna de Independencia, y responde aunque apaguen los datos.
 ::::
 :::: {.column width="48%"}
 ![](img/pantalla.png){width="46%"}
