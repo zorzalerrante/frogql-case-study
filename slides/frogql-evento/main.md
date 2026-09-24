@@ -21,15 +21,18 @@ El trabajo es tanto que la pregunta se deja de hacer.
 ::::
 :::
 
-## froGQL guarda la relación en lugar de recalcularla
+## La respuesta: 132 lugares, entre ellos una discoteca y dos botillerías
 
 ::: columns
 :::: {.column width="46%"}
-La calle es un dato más de la base, y cada reclamo y cada local guardan a qué calle pertenecen.
+En Avenida Independencia, la calle del reclamo:
 
-Para saber qué hay en una calle, la base sigue esas dos flechas. No mide distancias y no decide qué es cerca.
+- Club Papa Rock, discoteca
+- Barracuda, botillería
+- Una botillería más, sin nombre en el mapa
+- Y 129 lugares que no hacen ruido: colegios, farmacias, almacenes
 
-La relación ya está guardada y no se calcula en el momento.
+froGQL los encontró en **0,7 milisegundos**.
 ::::
 :::: {.column width="54%"}
 ```{.dot width="100%"}
@@ -44,6 +47,8 @@ digraph Q {
   l -> c [label=" está en"];
 }
 ```
+
+La base ya sabe a qué calle pertenece cada uno. Responder es seguir dos flechas.
 ::::
 :::
 
