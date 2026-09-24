@@ -50,13 +50,13 @@ digraph Q {
 ## Demostración: la comuna entera, en su teléfono, en modo avión
 
 ::: columns
-:::: {.column width="38%"}
-![](img/qr.png){width="72%"}
+:::: {.column width="52%"}
+![](img/qr.png){width="40%"}
 
 Escaneen y consulten su propia calle. Funciona aunque apaguen los datos.
 ::::
-:::: {.column width="62%"}
-![](img/pantalla.png){width="52%"}
+:::: {.column width="48%"}
+![](img/pantalla.png){width="46%"}
 ::::
 :::
 
@@ -64,15 +64,13 @@ Escaneen y consulten su propia calle. Funciona aunque apaguen los datos.
 
 ::: columns
 :::: {.column width="50%"}
-| | |
+| El demo en números | |
 |---|---|
-| Barrios y esquinas | 4658 |
+| Esquinas, calles y locales | 4658 |
 | Relaciones entre ellos | 13 886 |
-| La base completa | 342 KB |
-| El motor de consultas | 426 KB |
+| La base más el motor | 768 KB |
 | En abrirla | 70 ms |
 | En responder | 3 ms |
-| Servidores involucrados | ninguno |
 ::::
 :::: {.column width="50%"}
 La base entera pesa menos que una foto del teléfono, y responde en menos tiempo del que dura un parpadeo.
@@ -134,18 +132,16 @@ Es embebida: la base es un archivo y no hay servidor que instalar ni administrar
 ## El caso que vieron está completo y abierto
 
 ::: columns
-:::: {.column width="52%"}
+:::: {.column width="56%"}
 La comuna de Independencia como grafo: calles, esquinas, locales, reclamos ciudadanos y zonas censales, construido desde OpenStreetMap y datos públicos.
 
 Todo se descarga solo, así que cualquiera reproduce el caso desde un clon del repositorio.
 ::::
-:::: {.column width="48%"}
-![](img/ruido-por-calle.png){width="88%"}
+:::: {.column width="44%"}
+![](img/ruido-por-calle.png){width="58%"}
 ::::
 :::
 
 ## Pruébenla {.end}
 
-`pip install frogql` · `npm install frogql-wasm`
-
-github.com/pleiad/frogql
+`pip install frogql` · github.com/pleiad/frogql
