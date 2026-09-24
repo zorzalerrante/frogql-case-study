@@ -101,22 +101,30 @@ La misma consulta sobre el Gran Santiago entero, cien veces más grande, tarda l
 
 ## Preguntar por caminos es donde SQL se complica
 
-::: columns
-:::: {.column width="52%"}
-La misma historia, con una pregunta más:
-
 > Con tanto ruido me dio sed... ¿qué botillerías y bares hay a una o dos cuadras?
 
-froGQL responde en **42 milisegundos** con 20 locales. El primero es la Botillería Víctor, en Lastra, a una cuadra.
+::: columns
+:::: {.column width="54%"}
+```
+MATCH (mi:Calle)
+  ~[:CRUZA_CON]~{1,2}
+  (otra:Calle)<-[:EN_CALLE]-(l:Lugar)
+WHERE mi.nombre =
+      'Avenida Independencia'
+  AND l.categoria IN
+      ['amenity=bar', 'shop=alcohol']
+RETURN DISTINCT l.etiqueta AS local,
+       otra.nombre AS calle
+```
 ::::
-:::: {.column width="48%"}
-La parte que dice "una o dos cuadras" es esta:
+:::: {.column width="46%"}
+| local | calle |
+|---|---|
+| Botillería Víctor | Lastra |
+| Botillería Victoria | Rivera |
+| Botillería Los Ángeles | Gamero |
 
-`{1,2}`
-
-En SQL hace falta una consulta que se llama a sí misma, juntar los resultados de cada nivel y escribir a mano dónde parar.
-
-Para preguntar por cinco cuadras en vez de dos, acá se cambia un número.
+18 locales, en 35 milisegundos. En SQL, recorrer una o dos cuadras pide una consulta que se llama a sí misma.
 ::::
 :::
 
