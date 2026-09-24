@@ -1,138 +1,15 @@
 // Mapa de la red vial dibujado sobre canvas, con los datos que entrega el
-// propio motor.
-//
-// La geometría no viene de un archivo aparte ni de un servidor de mapas: sale
-// de consultar el grafo. Cada tramo es un par de intersecciones con `lon` y
-// `lat`, y el `calle_id` que trae la arista permite encender las calles que
-// nombra el resultado de una consulta.
-//
-// Los tramos se dibujan como rectas entre esquinas. El grafo no guarda la
-// geometría intermedia de cada way, así que una curva larga sale como cuerda.
-// A escala de comuna el trazado se reconoce igual.
-
-const MODOS = {
-  auto: { etiqueta: "Auto", arista: "CONECTA_AUTO" },
-  bici: { etiqueta: "Bici", arista: "CONECTA_BICI" },
-  peaton: { etiqueta: "Peatón", arista: "CONECTA_PEATON" },
-};
-
-// Las tres capas de puntos que cuelgan de la red. La clave es la propiedad por
-// la que se reconoce un punto en el resultado de una consulta: los lugares por
-// su etiqueta, los reclamos por su identificador, los venues por el suyo.
-const CAPAS = {
-  lugares: {
-    etiqueta: "Lugares",
-    color: "lugar",
-    // `ref` es el identificador propio, que sirve para pegarle su calle.
-    consulta:
-      "MATCH (n:Lugar) RETURN n.lon AS x, n.lat AS y, n.etiqueta AS clave, " +
-      "n.osm_id AS ref, n.categoria AS detalle",
-    conCalle: "MATCH (n:Lugar)-[:EN_CALLE]->(c:Calle) RETURN n.osm_id AS ref, c.nombre AS calle",
-  },
-  reclamos: {
-    etiqueta: "Reclamos",
-    color: "reclamo",
-    consulta:
-      "MATCH (n:Reclamo) RETURN n.lon AS x, n.lat AS y, n.reporte_id AS clave, " +
-      "n.categoria AS titulo, n.fecha AS fecha, n.descripcion AS texto",
-  },
-  venues: {
-    etiqueta: "Venues",
-    color: "venue",
-    // Los venues de Foursquare no traen nombre, así que el título es su
-    // categoría y el identificador no se muestra.
-    consulta:
-      "MATCH (n:Venue) RETURN n.lon AS x, n.lat AS y, n.venue_id AS clave, " +
-      "n.categoria AS titulo, n.checkins AS checkins",
-  },
-};
+// propio motor. La lectura del grafo vive en `grafo.js`; acá solo se dibuja.
+import { MODOS, CAPAS, leerGrafo, ubicarFilas, ubicarNodos } from "./grafo.js";
 
 const ZOOM_MAX = 40;
 const ZOOM_MIN = 0.8;
 const RADIO_PUNTO = 1.7;
 
-/** Lee los tramos de un modo y los deja como arreglo plano de coordenadas. */
-function tramosDe(conexion, arista) {
-  const filas = conexion.execute(
-    `MATCH (a:Interseccion)-[e:${arista}]-(b:Interseccion) ` +
-      "RETURN a.lon AS x1, a.lat AS y1, b.lon AS x2, b.lat AS y2, e.calle_id AS calle",
-    0,
-  );
-  // El patrón sin sentido devuelve cada tramo una vez por extremo. Se deja una
-  // sola copia, con la clave ordenada para que los dos sentidos colapsen.
-  const vistos = new Set();
-  const tramos = [];
-  for (const f of filas) {
-    const clave =
-      f.x1 < f.x2 || (f.x1 === f.x2 && f.y1 <= f.y2)
-        ? `${f.x1},${f.y1},${f.x2},${f.y2}`
-        : `${f.x2},${f.y2},${f.x1},${f.y1}`;
-    if (vistos.has(clave)) continue;
-    vistos.add(clave);
-    tramos.push({ x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, calle: f.calle });
-  }
-  return tramos;
-}
-
-/** Lee los puntos de una capa con lo que hace falta para mostrarlos.
- *
- * Los lugares llevan además la calle a la que pertenecen. Su etiqueta no los
- * identifica: en la comuna hay 37 nombres compartidos por 105 lugares, entre
- * ellos nueve parques sin nombre y siete Copec. La calle separa a los
- * homónimos cuando el resultado de una consulta la nombra.
- */
-function puntosDe(conexion, nombre, capa) {
-  const puntos = conexion.execute(capa.consulta, 0);
-  for (const p of puntos) p.capa = nombre;
-  if (!capa.conCalle) return puntos;
-
-  const calles = new Map();
-  for (const f of conexion.execute(capa.conCalle, 0)) calles.set(f.ref, f.calle);
-  for (const p of puntos) p.calle = calles.get(p.ref);
-  return puntos;
-}
-
 export function crearMapa(canvas, conexion, colores, alTocar) {
-  const redes = {};
-  for (const [nombre, modo] of Object.entries(MODOS)) {
-    redes[nombre] = tramosDe(conexion, modo.arista);
-  }
-
-  const capas = {};
+  const grafo = leerGrafo(conexion);
+  const { redes, capas, porCoordenada, limites } = grafo;
   const visibles = new Set();
-  // Para volver de una coordenada al punto que la ocupa, al tocar el mapa.
-  const porCoordenada = new Map();
-  // Un punto se puede nombrar de varias formas y un nombre puede repetirse
-  // entre lugares, así que el índice guarda listas.
-  const porClave = new Map();
-  for (const [nombre, capa] of Object.entries(CAPAS)) {
-    capas[nombre] = puntosDe(conexion, nombre, capa);
-    for (const punto of capas[nombre]) {
-      porCoordenada.set(`${punto.x},${punto.y}`, punto);
-      if (typeof punto.clave !== "string") continue;
-      const llave = punto.clave.toLowerCase();
-      if (!porClave.has(llave)) porClave.set(llave, []);
-      porClave.get(llave).push(punto);
-    }
-  }
-
-  // Índice de nombre a identificador, para traducir lo que devuelven las
-  // consultas, que hablan de nombres, a lo que llevan los tramos.
-  const porNombre = new Map();
-  for (const c of conexion.execute("MATCH (c:Calle) RETURN c.calle_id AS id, c.nombre AS nombre", 0)) {
-    porNombre.set(c.nombre.toLowerCase(), c.id);
-  }
-
-  const todos = Object.values(redes).flat();
-  const limites = todos.reduce(
-    (l, t) => ({
-      xmin: Math.min(l.xmin, t.x1, t.x2),
-      xmax: Math.max(l.xmax, t.x1, t.x2),
-      ymin: Math.min(l.ymin, t.y1, t.y2),
-      ymax: Math.max(l.ymax, t.y1, t.y2),
-    }),
-    { xmin: Infinity, xmax: -Infinity, ymin: Infinity, ymax: -Infinity },
-  );
 
   let modo = "auto";
   let destacadas = new Set();
@@ -353,52 +230,17 @@ export function crearMapa(canvas, conexion, colores, alTocar) {
      * reclamos y venues por la clave con que los identifica su etiqueta.
      */
     destacar(filas, columnasIgnoradas = new Set()) {
-      destacadas = new Set();
-      const puntos = new Map();
-      let ambiguos = 0;
-      for (const fila of filas ?? []) {
-        // Los valores de la fila completa, para separar homónimos: si la fila
-        // nombra la calle, el lugar que se busca es el de esa calle.
-        const enLaFila = new Set(
-          Object.entries(fila)
-            .filter(([col, v]) => typeof v === "string" && !columnasIgnoradas.has(col))
-            .map(([, v]) => v.toLowerCase()),
-        );
-        for (const llave of enLaFila) {
-          const calle = porNombre.get(llave);
-          if (calle) destacadas.add(calle);
-
-          const candidatos = porClave.get(llave) ?? [];
-          const elegidos =
-            candidatos.length < 2
-              ? candidatos
-              : candidatos.filter((p) => p.calle && enLaFila.has(p.calle.toLowerCase()));
-          // Un nombre compartido que la fila no alcanza a desambiguar se deja
-          // apagado: encender los homónimos pone puntos lejos de su calle.
-          if (candidatos.length > 1 && !elegidos.length) ambiguos += 1;
-          for (const punto of elegidos) puntos.set(`${punto.x},${punto.y}`, punto);
-        }
-      }
-      puntosDestacados = [...puntos.values()];
+      const ubicado = ubicarFilas(grafo, filas, columnasIgnoradas);
+      destacadas = ubicado.calles;
+      puntosDestacados = ubicado.puntos;
       dibujar();
-      return { calles: destacadas.size, puntos: puntosDestacados.length, ambiguos };
+      return { calles: destacadas.size, puntos: puntosDestacados.length, ambiguos: ubicado.ambiguos };
     },
-    /**
-     * Enciende nodos concretos, como los que devuelve el inspector de
-     * constantes: las calles por su `calle_id` y el resto por sus coordenadas.
-     */
+    /** Enciende nodos concretos, como los que devuelve el inspector de constantes. */
     destacarNodos(nodos) {
-      destacadas = new Set();
-      const puntos = new Map();
-      for (const nodo of nodos ?? []) {
-        const props = nodo?.props ?? {};
-        if (nodo?.labels?.includes("Calle") && props.calle_id) {
-          destacadas.add(props.calle_id);
-        } else if (typeof props.lon === "number" && typeof props.lat === "number") {
-          puntos.set(`${props.lon},${props.lat}`, { x: props.lon, y: props.lat });
-        }
-      }
-      puntosDestacados = [...puntos.values()];
+      const ubicado = ubicarNodos(grafo, nodos);
+      destacadas = ubicado.calles;
+      puntosDestacados = ubicado.puntos;
       dibujar();
       return { calles: destacadas.size, puntos: puntosDestacados.length };
     },

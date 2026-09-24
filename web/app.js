@@ -6,6 +6,7 @@
 // `.gdb`. La versión del motor la fija `preparar-web.py`.
 import init, { open_json } from "./vendor/frogql_wasm.js";
 import { crearMapa } from "./mapa.js";
+import { constantesDe, etiquetasDe } from "./grafo.js";
 
 // El identificador que traen los .gql como plantilla. Los identificadores son
 // correlativos por área, así que hay que reemplazarlo por uno que exista acá.
@@ -37,43 +38,6 @@ const ms = (valor) => (valor < 10 ? valor.toFixed(1) : Math.round(valor)) + " ms
 const contar = (cantidad, singular, plural) =>
   `${numero.format(cantidad)} ${cantidad === 1 ? singular : plural}`;
 
-/**
- * Encuentra las constantes de texto de una consulta junto con el nodo al que
- * pertenecen.
- *
- * Los doce archivos escriben sus constantes de dos formas, `v.prop = 'x'` y
- * `v.prop IN ['x', 'y']`, y declaran la etiqueta de cada variable en el
- * patrón. Eso alcanza para saber que `'000050'` es el `reporte_id` de un
- * `Reclamo`. El parser sirve para las consultas del repositorio y no pretende
- * cubrir GQL entero: por eso desaparece al editar el texto.
- */
-function constantesDe(gql) {
-  const etiquetas = new Map();
-  for (const [, variable, etiqueta] of gql.matchAll(/\(\s*([a-z]\w*)\s*:\s*([A-Z]\w*)/g)) {
-    etiquetas.set(variable, etiqueta);
-  }
-
-  const encontradas = [];
-  const anotar = (variable, propiedad, valor, inicio) => {
-    const etiqueta = etiquetas.get(variable);
-    if (etiqueta) {
-      encontradas.push({ etiqueta, propiedad, valor, inicio, fin: inicio + valor.length + 2 });
-    }
-  };
-
-  for (const m of gql.matchAll(/(\w+)\.(\w+)\s*=\s*'([^']*)'/g)) {
-    anotar(m[1], m[2], m[3], m.index + m[0].lastIndexOf("'" + m[3] + "'"));
-  }
-  for (const m of gql.matchAll(/(\w+)\.(\w+)\s+IN\s*\[([^\]]*)\]/g)) {
-    const lista = m[3];
-    const desplazamiento = m.index + m[0].indexOf(lista);
-    for (const item of lista.matchAll(/'([^']*)'/g)) {
-      anotar(m[1], m[2], item[1], desplazamiento + item.index);
-    }
-  }
-  return encontradas.sort((x, y) => x.inicio - y.inicio);
-}
-
 /** Dibuja la consulta con sus constantes como botones. */
 function codigoConConstantes(gql, alPulsar) {
   const pre = document.createElement("pre");
@@ -93,13 +57,6 @@ function codigoConConstantes(gql, alPulsar) {
   }
   pre.append(document.createTextNode(gql.slice(cursor)));
   return pre;
-}
-
-/** Etiquetas que la consulta nombra, para saber si el grafo las tiene. */
-function etiquetasDe(gql) {
-  return new Set(
-    [...gql.matchAll(/[:|]\s*([A-Z][A-Za-z_]*)/g)].map((coincidencia) => coincidencia[1]),
-  );
 }
 
 function tabla(filas) {
