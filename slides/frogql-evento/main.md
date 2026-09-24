@@ -78,9 +78,9 @@ Escaneen y consulten su propia calle. Funciona aunque apaguen los datos.
 | En responder | 3 ms |
 ::::
 :::: {.column width="50%"}
-Los 768 kilobytes se descargaron una vez y quedaron en el teléfono.
+Los 768 kilobytes se descargaron una vez y quedaron en el teléfono. Las consultas se resolvieron ahí mismo y ningún dato salió del aparato.
 
-Las consultas se resolvieron ahí mismo. Ningún dato salió del aparato.
+Todo con datos públicos: las calles y los locales vienen de OpenStreetMap, los reclamos vecinales de SOSAFE y la vida nocturna de Foursquare.
 ::::
 :::
 
