@@ -30,6 +30,9 @@ const $ = (id) => document.getElementById(id);
 
 const numero = new Intl.NumberFormat("es-CL");
 const ms = (valor) => (valor < 10 ? valor.toFixed(1) : Math.round(valor)) + " ms";
+/** "1 calle" y "20 calles", que la pantalla se lee en voz alta. */
+const contar = (cantidad, singular, plural) =>
+  `${numero.format(cantidad)} ${cantidad === 1 ? singular : plural}`;
 
 /**
  * Encuentra las constantes de texto de una consulta junto con el nodo al que
@@ -264,7 +267,7 @@ function ficha(consulta, correr, alTerminar, inspeccionar) {
           pie.textContent =
             total > FILAS_VISIBLES
               ? `${FILAS_VISIBLES} de ${numero.format(total)} filas.`
-              : `${numero.format(total)} filas.`;
+              : contar(total, "fila.", "filas.");
           salida.append(pie);
         }
         alTerminar?.(consulta, resultado);
@@ -448,8 +451,9 @@ async function arrancar() {
     nota.textContent =
       total === 1
         ? "Un nodo, encendido en el mapa."
-        : `${numero.format(total)} nodos. ` +
-          `El mapa enciende ${numero.format(ubicados)} y abajo va el primero.`;
+        : `${numero.format(total)} nodos. El mapa enciende ` +
+          `${contar(ubicados, "uno", "todos los que tienen coordenadas")} ` +
+          "y abajo va el primero.";
 
     const props = nodos[0]?.props ?? {};
     const lista = document.createElement("dl");
@@ -470,8 +474,8 @@ async function arrancar() {
   const alTerminar = (consulta, resultado) => {
     const { calles, puntos } = mapa.destacar(resultado.filas, COLUMNAS_NO_UBICABLES);
     const partes = [];
-    if (calles) partes.push(`${numero.format(calles)} calles`);
-    if (puntos) partes.push(`${numero.format(puntos)} puntos`);
+    if (calles) partes.push(contar(calles, "calle", "calles"));
+    if (puntos) partes.push(contar(puntos, "punto", "puntos"));
     const muestra = document.createElement("span");
     muestra.className = "muestra";
     pintadas.replaceChildren(
@@ -541,7 +545,7 @@ async function arrancar() {
     }
     todas.disabled = false;
     todas.textContent = "Correr todas";
-    total.textContent = `${ejecutables.length} consultas en ${ms(suma)}`;
+    total.textContent = `${contar(ejecutables.length, "consulta", "consultas")} en ${ms(suma)}`;
   });
 }
 
