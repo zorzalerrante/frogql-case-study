@@ -20,7 +20,14 @@ const MODOS = {
 // la que se reconoce un punto en el resultado de una consulta: los lugares por
 // su etiqueta, los reclamos por su identificador, los venues por el suyo.
 const CAPAS = {
-  lugares: { etiqueta: "Lugares", nodo: "Lugar", clave: "etiqueta", color: "lugar" },
+  lugares: {
+    etiqueta: "Lugares",
+    nodo: "Lugar",
+    clave: "etiqueta",
+    // Identificador propio, para poder pegarle su calle.
+    calle: "osm_id",
+    color: "lugar",
+  },
   reclamos: { etiqueta: "Reclamos", nodo: "Reclamo", clave: "reporte_id", color: "reclamo" },
   venues: { etiqueta: "Venues", nodo: "Venue", clave: "venue_id", color: "venue" },
 };
@@ -52,13 +59,32 @@ function tramosDe(conexion, arista) {
   return tramos;
 }
 
-/** Lee los puntos de una capa con su clave de identificación. */
+/** Lee los puntos de una capa con su clave de identificación.
+ *
+ * Los lugares llevan además la calle a la que pertenecen. Su etiqueta no los
+ * identifica: en la comuna hay 37 nombres compartidos por 105 lugares, entre
+ * ellos nueve parques sin nombre y siete Copec. La calle sirve para separar a
+ * los homónimos cuando el resultado de una consulta la nombra.
+ */
 function puntosDe(conexion, capa) {
-  return conexion.execute(
+  const puntos = conexion.execute(
     `MATCH (n:${capa.nodo}) ` +
-      `RETURN n.lon AS x, n.lat AS y, n.${capa.clave} AS clave`,
+      `RETURN n.lon AS x, n.lat AS y, n.${capa.clave} AS clave` +
+      (capa.calle ? `, n.${capa.calle} AS ref` : ""),
     0,
   );
+  if (!capa.calle) return puntos;
+
+  const calles = new Map();
+  for (const f of conexion.execute(
+    `MATCH (n:${capa.nodo})-[:EN_CALLE]->(c:Calle) ` +
+      `RETURN n.${capa.calle} AS ref, c.nombre AS calle`,
+    0,
+  )) {
+    calles.set(f.ref, f.calle);
+  }
+  for (const p of puntos) p.calle = calles.get(p.ref);
+  return puntos;
 }
 
 export function crearMapa(canvas, conexion, colores) {
@@ -277,20 +303,33 @@ export function crearMapa(canvas, conexion, colores) {
     destacar(filas, columnasIgnoradas = new Set()) {
       destacadas = new Set();
       const puntos = new Map();
+      let ambiguos = 0;
       for (const fila of filas ?? []) {
-        for (const [columna, valor] of Object.entries(fila)) {
-          if (typeof valor !== "string" || columnasIgnoradas.has(columna)) continue;
-          const llave = valor.toLowerCase();
+        // Los valores de la fila completa, para separar homónimos: si la fila
+        // nombra la calle, el lugar que se busca es el de esa calle.
+        const enLaFila = new Set(
+          Object.entries(fila)
+            .filter(([col, v]) => typeof v === "string" && !columnasIgnoradas.has(col))
+            .map(([, v]) => v.toLowerCase()),
+        );
+        for (const llave of enLaFila) {
           const calle = porNombre.get(llave);
           if (calle) destacadas.add(calle);
-          for (const punto of porClave.get(llave) ?? []) {
-            puntos.set(`${punto.x},${punto.y}`, punto);
-          }
+
+          const candidatos = porClave.get(llave) ?? [];
+          const elegidos =
+            candidatos.length < 2
+              ? candidatos
+              : candidatos.filter((p) => p.calle && enLaFila.has(p.calle.toLowerCase()));
+          // Un nombre compartido que la fila no alcanza a desambiguar se deja
+          // apagado: encender los homónimos pone puntos lejos de su calle.
+          if (candidatos.length > 1 && !elegidos.length) ambiguos += 1;
+          for (const punto of elegidos) puntos.set(`${punto.x},${punto.y}`, punto);
         }
       }
       puntosDestacados = [...puntos.values()];
       dibujar();
-      return { calles: destacadas.size, puntos: puntosDestacados.length };
+      return { calles: destacadas.size, puntos: puntosDestacados.length, ambiguos };
     },
     /**
      * Enciende nodos concretos, como los que devuelve el inspector de

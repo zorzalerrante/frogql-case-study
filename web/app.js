@@ -472,7 +472,10 @@ async function arrancar() {
 
   // Cada consulta que termina enciende en el mapa las calles que nombra.
   const alTerminar = (consulta, resultado) => {
-    const { calles, puntos } = mapa.destacar(resultado.filas, COLUMNAS_NO_UBICABLES);
+    const { calles, puntos, ambiguos } = mapa.destacar(
+      resultado.filas,
+      COLUMNAS_NO_UBICABLES,
+    );
     const partes = [];
     if (calles) partes.push(contar(calles, "calle", "calles"));
     if (puntos) partes.push(contar(puntos, "punto", "puntos"));
@@ -482,7 +485,8 @@ async function arrancar() {
       muestra,
       document.createTextNode(
         partes.length
-          ? `${partes.join(" y ")} de la consulta ${consulta.numero}`
+          ? `${partes.join(" y ")} de la consulta ${consulta.numero}` +
+            (ambiguos ? `, más ${ambiguos} con nombre repetido sin ubicar` : "")
           : `la consulta ${consulta.numero} no nombra nada ubicable`,
       ),
     );
