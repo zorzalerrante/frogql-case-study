@@ -15,9 +15,9 @@ Un vecino de Independencia reportó esto en abril de 2024:
 La pregunta que sigue es obvia para cualquiera que viva ahí: **qué hay en esa calle**. Un bar, una botillería, un local de comida.
 ::::
 :::: {.column width="48%"}
-Con planillas y capas geográficas, responderla exige comparar cada punto del mapa con cada calle y fijar un umbral de distancia. Cada vez, para cada pregunta nueva.
+Con una planilla hay que medir la distancia de cada punto del mapa a cada calle y decidir a mano cuánto es "cerca". De nuevo para cada pregunta.
 
-El costo de preguntar es tan alto que la pregunta se deja de hacer.
+Preguntar cuesta tanto que la pregunta se deja de hacer.
 ::::
 :::
 
@@ -27,9 +27,9 @@ El costo de preguntar es tan alto que la pregunta se deja de hacer.
 :::: {.column width="46%"}
 La calle pasa a ser una cosa en la base de datos, con reclamos y locales colgando de ella.
 
-"Qué hay en esta calle" se responde siguiendo dos flechas. Sin geometría, sin umbrales, sin recalcular.
+"Qué hay en esta calle" se responde siguiendo dos flechas. Sin medir distancias y sin decidir qué es cerca.
 
-Y quien pregunta escribe la pregunta que quiera.
+La respuesta ya está guardada en la forma de los datos.
 ::::
 :::: {.column width="54%"}
 ```{.dot width="100%"}
@@ -90,7 +90,28 @@ Esa es la diferencia con un tablero o un informe: el tablero responde lo que alg
 :::: {.column width="50%"}
 Y el tamaño no cambia el costo cuando la pregunta parte de un punto conocido.
 
-La misma consulta sobre el Gran Santiago, con **460 mil** nodos y **1,7 millones** de relaciones, tarda lo mismo que sobre esta comuna: medio milisegundo.
+La misma consulta sobre el Gran Santiago entero, cien veces más grande, tarda lo mismo que sobre esta comuna: medio milisegundo.
+::::
+:::
+
+## Preguntar por caminos es donde SQL se complica
+
+::: columns
+:::: {.column width="52%"}
+La misma historia, una pregunta más allá:
+
+> ¿Qué botillerías y bares hay a una o dos cuadras del reclamo?
+
+froGQL responde en **42 milisegundos** con 20 locales. El primero es la Botillería Víctor, en Lastra, a una cuadra.
+::::
+:::: {.column width="48%"}
+Todo el peso lo lleva el pedazo que dice "una o dos cuadras":
+
+`{1,2}`
+
+En SQL hay que escribir una consulta que se llama a sí misma, juntar los resultados de cada nivel y decidir a mano dónde parar.
+
+Cambiar dos cuadras por cinco: acá es cambiar un número.
 ::::
 :::
 
@@ -118,30 +139,19 @@ La base viaja dentro de la aplicación, así que la aplicación sigue respondien
 :::: {.column width="50%"}
 **Qué es.** Un motor de bases de datos de grafos hecho en Chile, en el laboratorio Pleiad del Departamento de Ciencias de la Computación de la Universidad de Chile.
 
-Implementa GQL, el estándar ISO de consulta de grafos aprobado en 2024, el primero desde SQL.
+Habla GQL, el lenguaje de consulta de grafos que ISO aprobó en 2024. Es el primer estándar nuevo de este tipo desde SQL.
 
-Es embebida: la base es un archivo y no hay servidor que instalar ni administrar.
+La base es un archivo. No hay servidor que instalar ni que administrar.
 ::::
 :::: {.column width="50%"}
-**Dónde corre.** Desde Python, desde Node, desde la línea de comandos y dentro del navegador compilada a WebAssembly.
+**Dónde corre.** Desde Python, desde JavaScript, desde la línea de comandos y dentro del navegador, compilada a WebAssembly, que es lo que le permite correr en el teléfono de cada uno de ustedes.
 
-**Qué no es.** Un reemplazo de un motor distribuido sobre terabytes. Brilla cuando la base cabe en el aparato de quien pregunta, que es la mayoría de los casos que no son una empresa grande.
-::::
-:::
-
-## El caso que vieron está completo y abierto
-
-::: columns
-:::: {.column width="56%"}
-La comuna de Independencia como grafo: calles, esquinas, locales, reclamos ciudadanos y zonas censales, construido desde OpenStreetMap y datos públicos.
-
-Todo se descarga solo, así que cualquiera reproduce el caso desde un clon del repositorio.
-::::
-:::: {.column width="44%"}
-![](img/ruido-por-calle.png){width="58%"}
+**Qué no es.** Un reemplazo para las bases gigantes repartidas en muchos servidores. Sirve cuando los datos caben en el aparato de quien pregunta, que es casi siempre.
 ::::
 :::
 
 ## Pruébenla {.end}
+
+Todo el caso es reproducible: los datos se descargan solos.
 
 `pip install frogql` · github.com/pleiad/frogql
