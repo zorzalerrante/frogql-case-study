@@ -1,6 +1,6 @@
 ## {.statement}
 
-Una base de datos de 768 kilobytes que se descarga con la página web, funciona sin conexión y responde en milisegundos.
+froGQL es una base de datos de grafos. Pesa 768 kilobytes, se descarga junto con la página web, funciona sin conexión y responde en milisegundos.
 
 Está hecha en Chile. Pueden probarla desde sus teléfonos en los próximos diez minutos.
 
