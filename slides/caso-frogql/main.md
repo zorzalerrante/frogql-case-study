@@ -214,9 +214,9 @@ El reclamo dice "Música alta, 20.00, por favor, no se puede estar tranquilo" y 
 
 ::: columns
 :::: {.column width="50%"}
-Dos consultas preguntan por locales de alcohol en calles con reclamos por ruido.
+La consulta de locales de alcohol en calles con reclamos por ruido usa `EXISTS` para saber si la calle tiene alguno.
 
-Una usa `EXISTS` para saber si la calle tiene alguno. La otra los cuenta con `GROUP BY`.
+Una versión anterior los contaba con `GROUP BY`.
 ::::
 :::: {.column width="50%"}
 Contar obliga a unir cada local con cada reclamo de su calle. En Avenida Irarrázaval hay 393 lugares y 66 reclamos por ruido, y ese producto se paga entero antes de agrupar.

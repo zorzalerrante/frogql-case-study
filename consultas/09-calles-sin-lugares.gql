@@ -1,9 +1,0 @@
--- Calles con reclamos por ruido y sin ningún lugar registrado en OSM.
--- Mide dónde el mapa colaborativo está menos completo que el reporte
--- ciudadano: hay actividad suficiente para reclamar y no hay POI mapeados.
-MATCH (c:Calle)
-WHERE EXISTS { (:Reclamo)-[:EN_CALLE]->(c) }
-  AND NOT EXISTS { (:Lugar)-[:EN_CALLE]->(c) }
-RETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, c.largo_m AS largo_m
-ORDER BY largo_m DESC
-LIMIT 20

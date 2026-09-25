@@ -1,0 +1,18 @@
+-- Calles con vida nocturna en Foursquare y ningún local nocturno en OSM.
+-- Ubica el vacío que describe la consulta 12: OSM casi no mapea bares en
+-- Chile, y la capa de Foursquare los registra en calles donde el mapa no
+-- tiene ninguno. Cruza dos fuentes sin salir del grafo porque las dos cuelgan
+-- de la misma calle.
+MATCH (v:Venue)-[:EN_CALLE]->(c:Calle)
+WHERE v.categoria IN ['Bar', 'Dive Bar', 'Pub', 'Nightclub', 'Brewery',
+                      'Beer Garden', 'Gay Bar', 'Gastropub', 'Rock Club',
+                      'Karaoke Bar', 'Lounge', 'Cocktail Bar', 'Sports Bar',
+                      'Wine Bar', 'Music Venue', 'Strip Club', 'Other Nightlife']
+  AND NOT EXISTS { MATCH (l:Lugar)-[:EN_CALLE]->(c)
+                   WHERE l.categoria IN ['amenity=bar', 'amenity=pub',
+                                         'amenity=nightclub', 'shop=alcohol'] }
+RETURN c.nombre AS calle, c.comuna AS comuna, COUNT(v) AS venues,
+       SUM(v.checkins) AS checkins
+GROUP BY c
+ORDER BY checkins DESC
+LIMIT 20

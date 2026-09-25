@@ -1,8 +1,0 @@
--- Cómo se asignó cada lugar a su calle.
--- `declarada` viene del tag addr:street del propio lugar; `cercania` es el eje
--- con nombre más próximo. La distinción queda en el grafo para que cualquier
--- consulta pueda descartar las asignaciones menos confiables.
-MATCH (l:Lugar)-[e:EN_CALLE]->(c:Calle)
-RETURN e.origen AS origen, COUNT(l) AS lugares
-GROUP BY e.origen
-ORDER BY lugares DESC

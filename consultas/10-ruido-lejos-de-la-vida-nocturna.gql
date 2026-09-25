@@ -1,0 +1,14 @@
+-- Cruces entre cada reclamo por ruido y el local nocturno más cercano.
+-- ANY SHORTEST encuentra el camino con menos cruces entre cada reclamo y cada
+-- bar, pub, discoteca o botillería, y MIN se queda con el más cercano. Se
+-- restan las dos aristas EN_CALLE de los extremos, así que 0 es un local en la
+-- misma calle. Los primeros de la lista son ruido que ningún local explica.
+-- Calcula un camino por cada par de reclamo y local, así que es la consulta
+-- más cara del conjunto y está pensada para la escala de una comuna.
+MATCH p = ANY SHORTEST (r:Reclamo)-[:EN_CALLE]->(c:Calle)~[:CRUZA_CON]~*(:Calle)<-[:EN_CALLE]-(l:Lugar)
+WHERE r.categoria = 'Ruido'
+  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'shop=alcohol']
+RETURN r.reporte_id AS reclamo, c.nombre AS calle, MIN(path_length(p)) - 2 AS cruces
+GROUP BY r, c
+ORDER BY cruces DESC
+LIMIT 20

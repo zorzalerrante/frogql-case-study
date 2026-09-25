@@ -87,7 +87,7 @@ y exporta a `salida/<área>/`.
 - `calles.py`: identidad de la calle y asignación de puntos a calles.
 - `contexto.py`: capas no viales (SOSAFE, zonas censales, venues de
   Foursquare). Sin las zonas censales el grafo se arma igual, sin nodos
-  `ZonaCensal`, y la consulta `08` queda vacía.
+  `ZonaCensal`. Ninguna consulta los usa.
 - `propiedades.py`: arma el grafo de propiedades (seis tipos de nodo, ocho de
   arista).
 - `exportar.py`: serializa a GraphML, JSON de froGQL y paquete CSV.
@@ -116,6 +116,11 @@ ahí una consulta camina la red y acota el recorrido con `sum(e.largo_m)`, que
 es lo que la gente quiere decir con "a dos cuadras". Un salto de `CRUZA_CON` no
 sirve para eso: une ejes enteros, y en Independencia uno de esos ejes mide tres
 kilómetros.
+
+El ancla se elige solo entre las intersecciones de la componente mayor de la
+red peatonal. La más cercana a secas puede quedar en una isla, como la calle
+de servicio interna del Hospital San José, y desde ahí la caminata no llega a
+ningún lado.
 
 La identidad de una calle combina el tag `name` con la conectividad: los tramos
 homónimos se agrupan por componente conexa y después se vuelven a unir los ejes
@@ -150,7 +155,36 @@ escrito así; `03-consultas.py` lo imprime, así que conviene mantenerlo.
 
 Los archivos traen `'000050'` como identificador plantilla. `03-consultas.py`
 lo sustituye por un reclamo por ruido del área activa que tenga lugares en su
-calle, porque los identificadores son correlativos por área.
+calle, porque los identificadores son correlativos por área. La `11` trae su
+propio identificador, `'000072'`, que no se sustituye: necesita un reclamo sin
+locales nocturnos en su calle para que el camino tenga calles intermedias.
+
+Cinco consultas buscan caminos con `SHORTEST` (`06`, `07`, `10`, `11` y `13`)
+y son las más caras. `SHORTEST` cuenta aristas y no las pondera: las que
+caminan la red (`07`, `13`) miden en metros el camino de menos cuadras, y las
+que cuentan cambios de calle (`06`, `10`, `11`) empatan a menudo. La `06` usa
+`ALL SHORTEST` para devolver todos los empates, y las páginas muestran uno a
+la vez. La `10` calcula un camino por cada par de reclamo y local:
+tarda más de dos segundos en Independencia y no está pensada para el Gran
+Santiago.
+
+Las columnas que devuelven listas, como `pasando_por` o `nombres`, las leen las
+páginas web elemento por elemento para encender cada calle o lugar.
+
+Las rutas de la `06` y la `11` doblan de calle en una intersección, con el
+grupo `(<-[:EN_CALLE]-(x:Interseccion)-[:EN_CALLE]->(m:Calle))*`, y no saltan
+por `CRUZA_CON`. Así devuelven las esquinas y las páginas encienden solo las
+cuadras entre una y otra, en vez de las calles enteras. `grafo.js` lee las
+esquinas de cualquier celda con nodos `Interseccion`: primero las listas, en
+orden, y después una esquina suelta como la última, porque el motor del
+navegador entrega las columnas en orden alfabético. La `10` sigue sobre
+`CRUZA_CON` porque no dibuja rutas y así es más rápida. Cuando un resultado
+trae varias rutas, las dos páginas las dibujan tenues y encienden la fila
+elegida, que al correr la consulta es la primera. Una ruta que no dobla trae la
+lista vacía y solo se reconoce porque la columna se llama `esquinas`. El
+reclamo y el local se unen a la ruta por su propia calle, la de su
+`EN_CALLE`, aunque quede lejos, y los homónimos de un nombre se buscan todos,
+porque el índice por nombre de la página guarda una sola calle.
 
 ## Visualizador web
 
@@ -182,7 +216,8 @@ Hay que saltarse la 0.5.3, que hacía panic en cualquier `open_json` por leer un
 reloj que el navegador no tiene.
 
 La página detecta las etiquetas que el grafo cargado no tiene y desactiva las
-consultas que las nombran, que sin `--con-censo` es la `08`.
+consultas que las nombran. Hoy ninguna de las trece nombra una etiqueta que
+falte sin `--con-censo`, pero el mecanismo sigue.
 
 Cada consulta se puede editar y correr modificada. En el texto original las
 constantes son botones: al pulsarlas se busca el nodo al que pertenecen y se
@@ -210,10 +245,11 @@ En el prototipo las consultas no se editan: `parametros.js` convierte cada
 constante (`= 'x'`, `IN [...]`) y cada `LIMIT` en un parámetro, y la ventana
 los muestra como controles cuyos valores posibles salen del grafo. Cada cambio
 vuelve a correr la consulta. Un parámetro sobre un identificador con capa de
-puntos (`Reclamo.reporte_id`) o sobre `Calle.nombre` también se llena tocando
-el mapa, y al tocar un elemento sin consulta que lo reciba la lectura ofrece
-las consultas que lo aceptan. Tocar una fila del resultado la enciende en el
-mapa. Depende de la misma convención de escritura de los `.gql` que el
+puntos (`Reclamo.reporte_id`, `Lugar.etiqueta`) o sobre `Calle.nombre` también
+se llena tocando el mapa; con dos parámetros del mismo tipo, como el origen y
+el destino de la `06`, los toques se turnan. Al tocar un elemento sin consulta
+que lo reciba, la lectura ofrece las consultas que lo aceptan. Tocar una fila
+del resultado la enciende en el mapa. Depende de la misma convención de escritura de los `.gql` que el
 vínculo de constantes de la otra página.
 
 En pantallas de menos de 700 px el prototipo pierde las capas de puntos y

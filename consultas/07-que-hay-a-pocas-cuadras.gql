@@ -1,0 +1,21 @@
+-- Qué tipos de lugares hay a menos de 300 metros caminando de un lugar dado.
+-- Saltar de calle en calle con CRUZA_CON no mide cercanía: une ejes con
+-- nombre completos, y un cruce desde el hospital llega al otro extremo de la
+-- comuna. Acá se camina la red peatonal desde la esquina del lugar y
+-- `sum(e.largo_m)` corta a los 300 metros, unas tres cuadras. Alrededor del
+-- Hospital San José aparecen el Instituto Nacional del Cáncer, una clínica,
+-- farmacias, florerías y una librería de ciencias médicas: el barrio de la
+-- salud. `~*` admite cero tramos, así que cuenta los lugares anclados a la
+-- misma esquina. Como en la 13, los metros son los del camino con menos
+-- cuadras. COUNT(DISTINCT l) cuenta cada lugar una vez y COLLECT junta sus
+-- nombres.
+MATCH ANY SHORTEST (o:Lugar)-[:EN_ESQUINA]->(:Interseccion)
+                   ~[e:CONECTA_PEATON]~*
+                   (:Interseccion)<-[:EN_ESQUINA]-(l:Lugar)
+WHERE o.etiqueta = 'Hospital San José' AND l <> o
+  AND sum(e.largo_m) < 300
+RETURN l.categoria AS categoria, COUNT(DISTINCT l) AS lugares,
+       COLLECT(DISTINCT l.etiqueta) AS nombres
+GROUP BY l.categoria
+ORDER BY lugares DESC
+LIMIT 20

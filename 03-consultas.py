@@ -99,6 +99,23 @@ def partir(texto: str) -> tuple[list[str], str]:
     return comentarios, consulta
 
 
+def legible(resultado: pd.DataFrame) -> pd.DataFrame:
+    """Resume las celdas que traen nodos completos, como las esquinas de una ruta.
+
+    El motor devuelve cada nodo con sus propiedades, que en una tabla ocupan
+    varias líneas. Para leer el resultado basta con saber cuántas esquinas son;
+    las páginas web las usan para encender las cuadras de la ruta.
+    """
+
+    def resumir(valor):
+        nodos = valor if isinstance(valor, list) else [valor]
+        if not nodos or not all(isinstance(n, dict) and n.get("kind") == "node" for n in nodos):
+            return valor
+        return f"{len(nodos)} {'esquina' if len(nodos) == 1 else 'esquinas'}"
+
+    return resultado.apply(lambda columna: columna.map(resumir))
+
+
 # %%
 if not RUTA_JSON.exists():
     raise FileNotFoundError(
@@ -187,7 +204,7 @@ for ruta in sorted(DIR_CONSULTAS.glob("*.gql")):
     if resultado.empty:
         print("  (sin filas)")
     else:
-        print(resultado.head(FILAS_VISIBLES).to_string(index=False))
+        print(legible(resultado.head(FILAS_VISIBLES)).to_string(index=False))
         if len(resultado) > FILAS_VISIBLES:
             print(f"  ... {len(resultado)} filas en total")
     print()

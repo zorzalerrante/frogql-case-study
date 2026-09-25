@@ -1,9 +1,14 @@
--- Calles con más reclamos por ruido.
+-- Calles con más reclamos por ruido, separando noche y fin de semana.
 -- `GROUP BY c` agrupa por la identidad del nodo, no por su nombre: dos calles
 -- homónimas de comunas distintas son dos nodos y quedan separadas.
+-- La noche va de las 22 a las 6 y el fin de semana es sábado y domingo
+-- (`dia_semana` 5 y 6). Separarlos distingue una avenida que reclama a toda
+-- hora de una calle cuyo ruido es de carrete.
 MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)
 WHERE r.categoria = 'Ruido'
-RETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, COUNT(r) AS reclamos
+RETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, COUNT(r) AS reclamos,
+       SUM(CASE WHEN r.hora >= 22 OR r.hora < 6 THEN 1 ELSE 0 END) AS de_noche,
+       SUM(CASE WHEN r.dia_semana >= 5 THEN 1 ELSE 0 END) AS fin_de_semana
 GROUP BY c
 ORDER BY reclamos DESC
 LIMIT 20

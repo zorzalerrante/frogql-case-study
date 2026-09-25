@@ -1,9 +1,0 @@
--- Lugares con más reclamos por ruido a menos de 50 metros.
--- CERCA_DE es proximidad geométrica, no pertenencia a la misma calle: un
--- reclamo puede estar cerca de un lugar de la calle de atrás.
-MATCH (r:Reclamo)-[:CERCA_DE]->(l:Lugar)
-WHERE r.categoria = 'Ruido'
-RETURN l.etiqueta AS lugar, l.categoria AS categoria, COUNT(r) AS reclamos
-GROUP BY l
-ORDER BY reclamos DESC
-LIMIT 20

@@ -6,7 +6,11 @@
 -- EN_ESQUINA es lo que lo hace posible. EN_CALLE cuelga el punto del eje con
 -- nombre completo, que puede medir kilómetros; EN_ESQUINA lo ancla además a la
 -- intersección más cercana, que es donde empieza y termina la caminata.
--- ANY SHORTEST se queda con un camino por par de extremos. Sin eso el motor
+-- ANY SHORTEST se queda con un camino por par de extremos: el de menos
+-- cuadras, no el de menos metros, porque SHORTEST cuenta aristas y no las
+-- pondera. `metros` es el largo de ese camino. En una cuadrícula los dos
+-- casi coinciden, pero entre dos caminos con las mismas cuadras el motor
+-- elige cualquiera y los metros pueden variar. Sin ANY SHORTEST el motor
 -- enumera todos los caminos posibles entre las dos puntas, que son millones.
 MATCH ANY SHORTEST (r:Reclamo)-[:EN_ESQUINA]->(i:Interseccion)
                    ~[e:CONECTA_PEATON]~+

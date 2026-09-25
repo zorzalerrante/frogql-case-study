@@ -85,7 +85,7 @@ digraph G2 {
 ::::
 :::
 
-Con los 675 lugares y las 325 calles de Independencia, la planilla mide 219 375 distancias en cada pregunta. El grafo guarda 631 aristas, una por cada lugar con calle asignada.
+Con los 676 lugares y las 325 calles de Independencia, la planilla mide 219 700 distancias en cada pregunta. El grafo guarda 632 aristas, una por cada lugar con calle asignada.
 
 ## En la calle del reclamo hay 132 lugares, entre ellos una discoteca y dos botillerías
 
@@ -146,7 +146,7 @@ Sin red, el mapa de fondo no carga, pero las consultas siguen respondiendo.
 ::::
 :::
 
-## El grafo de Independencia tiene 4658 nodos y 13 886 aristas
+## El grafo de Independencia tiene 4660 nodos y 13 888 aristas
 
 ::: columns
 :::: {.column width="58%"}
@@ -157,13 +157,13 @@ digraph E {
   edge [fontname="Urbanist", color="#0A0E50", fontcolor="#0A0E50", fontsize=16];
   rankdir=TB; nodesep=0.35; ranksep=1.1;
   r [label="Reclamo\n226", fillcolor="#CF3889", fontcolor="white", color="#CF3889"];
-  l [label="Lugar\n675"];
-  v [label="Venue\n822"];
+  l [label="Lugar\n676"];
+  v [label="Venue\n823"];
   i [label="Intersección\n2610", fillcolor="#e4e4ee", color="#a9a9bd"];
   c [label="Calle\n325", fillcolor="#0A0E50", fontcolor="white"];
   {rank=same; r; l; v; i;}
   r -> l [label="CERCA_DE 253", constraint=false];
-  r -> c [label="204"]; l -> c [label="631"]; v -> c [label="608"]; i -> c [label="2518"];
+  r -> c [label="204"]; l -> c [label="632"]; v -> c [label="609"]; i -> c [label="2518"];
   c -> c [label=" CRUZA_CON\n 814"];
   i -> i [label=" CONECTA\n 8858"];
 }
@@ -196,7 +196,7 @@ En la versión de una columna, la consulta también se edita y se corre en vivo,
 
 ## {.image}
 
-![La consulta de locales con alcohol en calles con reclamos por ruido, sin los restaurantes. Las calles y los locales del resultado quedan encendidos sobre la red de la comuna.](img/escritorio-03.png){width="96%"}
+![La consulta de locales nocturnos y botillerías en calles con reclamos por ruido, sin las discotecas. Las calles y los locales del resultado quedan encendidos sobre la red de la comuna.](img/escritorio-03.png){width="96%"}
 
 ## Un patrón de largo variable mide cuánto hay que caminar
 

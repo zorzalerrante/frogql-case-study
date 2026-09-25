@@ -6,7 +6,7 @@
 // `.gdb`. La versión del motor la fija `preparar-web.py`.
 import init, { open_json } from "./vendor/frogql_wasm.js";
 import { crearMapa } from "./mapa.js";
-import { constantesDe, etiquetasDe } from "./grafo.js";
+import { constantesDe, esRuta, etiquetasDe, textoDeLista } from "./grafo.js";
 
 // El identificador que traen los .gql como plantilla. Los identificadores son
 // correlativos por área, así que hay que reemplazarlo por uno que exista acá.
@@ -59,8 +59,20 @@ function codigoConConstantes(gql, alPulsar) {
   return pre;
 }
 
-function tabla(filas) {
+/**
+ * La tabla del resultado. Si las filas son rutas, cada una se puede elegir para
+ * verla sola en el mapa, y `elegirPrimera` deja elegida la primera.
+ */
+function tabla(filas, alElegir) {
   const visibles = filas.slice(0, FILAS_VISIBLES);
+  let elegida = null;
+  const elegir = (tr, fila) => {
+    elegida?.classList.remove("elegida");
+    elegida = tr;
+    tr.classList.add("elegida");
+    alElegir?.(fila);
+  };
+  let primera = null;
   const columnas = [...new Set(visibles.flatMap((fila) => Object.keys(fila)))];
   const tabla = document.createElement("table");
 
@@ -74,6 +86,18 @@ function tabla(filas) {
   const cuerpo = tabla.createTBody();
   for (const fila of visibles) {
     const tr = cuerpo.insertRow();
+    if (esRuta(fila)) {
+      tr.className = "ruta";
+      tr.tabIndex = 0;
+      tr.title = "Ver esta ruta en el mapa";
+      tr.addEventListener("click", () => elegir(tr, fila));
+      tr.addEventListener("keydown", (ev) => {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        ev.preventDefault();
+        elegir(tr, fila);
+      });
+      primera ??= () => elegir(tr, fila);
+    }
     for (const columna of columnas) {
       const valor = fila[columna];
       const celda = tr.insertCell();
@@ -82,14 +106,16 @@ function tabla(filas) {
           ? "—"
           : typeof valor === "number"
             ? numero.format(valor)
-            : String(valor);
+            : Array.isArray(valor) || typeof valor === "object"
+              ? textoDeLista(valor)
+              : String(valor);
       if (celda.textContent.length > LARGO_TEXTO) celda.classList.add("largo");
     }
   }
-  return tabla;
+  return { tabla, elegirPrimera: () => primera?.() };
 }
 
-function ficha(consulta, correr, alTerminar, inspeccionar) {
+function ficha(consulta, correr, alTerminar, inspeccionar, elegirRuta) {
   const seccion = document.createElement("section");
   seccion.className = "consulta";
 
@@ -195,7 +221,9 @@ function ficha(consulta, correr, alTerminar, inspeccionar) {
     return { seccion, correr: null };
   }
 
+  let elegirPrimeraRuta = () => {};
   const ejecutar = () => {
+    elegirPrimeraRuta = () => {};
     boton.disabled = true;
     boton.textContent = "Corriendo…";
     salida.replaceChildren();
@@ -219,8 +247,10 @@ function ficha(consulta, correr, alTerminar, inspeccionar) {
         } else {
           const marco = document.createElement("div");
           marco.className = "tabla";
-          marco.append(tabla(resultado.filas));
+          const hecha = tabla(resultado.filas, elegirRuta);
+          marco.append(hecha.tabla);
           salida.append(marco);
+          elegirPrimeraRuta = hecha.elegirPrimera;
           const pie = document.createElement("p");
           pie.className = "sin-filas";
           const total = resultado.filas.length;
@@ -231,6 +261,8 @@ function ficha(consulta, correr, alTerminar, inspeccionar) {
           salida.append(pie);
         }
         alTerminar?.(consulta, resultado);
+        // Después de encender el resultado, que borra la ruta elegida.
+        elegirPrimeraRuta();
         listo(resultado);
       }),
     );
@@ -532,7 +564,9 @@ async function arrancar() {
   for (const consulta of consultas) {
     consulta.gql = consulta.gql.replaceAll(`'${PLANTILLA}'`, `'${ejemplo}'`);
     consulta.faltan = [...etiquetasDe(consulta.gql)].filter((e) => !presentes.has(e));
-    const { seccion, correr: ejecutar } = ficha(consulta, correr, alTerminar, inspeccionar);
+    const { seccion, correr: ejecutar } = ficha(consulta, correr, alTerminar, inspeccionar, (fila) =>
+      mapa.elegirRuta(fila, COLUMNAS_NO_UBICABLES),
+    );
     lista.append(seccion);
     if (ejecutar) ejecutables.push(ejecutar);
   }

@@ -1,0 +1,16 @@
+-- Cómo se llega de un reclamo a los locales nocturnos más cercanos.
+-- Es la consulta 10 para un solo reclamo, con el camino a la vista. Cada
+-- vuelta del grupo dobla en una esquina que comparten dos calles: `m` junta
+-- las calles intermedias, `x` las esquinas, y ORDER BY path_length(p) deja
+-- primero los locales a menos cambios de calle. Con las esquinas el mapa
+-- enciende solo las cuadras que se recorren. El reclamo de ejemplo está en
+-- una calle residencial a tres cambios de calle del local más cercano.
+MATCH p = ANY SHORTEST (r:Reclamo)-[:EN_CALLE]->(c:Calle)
+          (<-[:EN_CALLE]-(x:Interseccion)-[:EN_CALLE]->(m:Calle))*
+          (<-[:EN_CALLE]-(l:Lugar))
+WHERE r.reporte_id = '000072'
+  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'shop=alcohol']
+RETURN r.reporte_id AS reclamo, l.etiqueta AS lugar, l.categoria AS categoria,
+       c.nombre AS desde, m.nombre AS pasando_por, x AS esquinas
+ORDER BY path_length(p)
+LIMIT 5

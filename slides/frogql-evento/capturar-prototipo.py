@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
         # Los parámetros de la consulta 03, con un valor de la lista apagado.
         abrir_consulta(pagina, 2)
-        pagina.locator(".ficha", has_text=re.compile("restaurant")).locator("input").uncheck()
+        pagina.locator(".ficha", has_text=re.compile("nightclub")).locator("input").uncheck()
         pagina.wait_for_timeout(1_500)
         guardar(pagina, "escritorio-03.png")
         guardar(pagina, "parametros-03.png", ".parametros")

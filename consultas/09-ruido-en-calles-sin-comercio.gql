@@ -1,0 +1,12 @@
+-- Calles con reclamos por ruido y sin ningún lugar ni venue registrado.
+-- Sin comercio en la calle, el ruido es vecinal: fiestas, perros, música de
+-- un departamento. También puede ser un vacío del mapa, porque OSM y
+-- Foursquare no registran todo lo que hay.
+MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)
+WHERE r.categoria = 'Ruido'
+  AND NOT EXISTS { (:Lugar)-[:EN_CALLE]->(c) }
+  AND NOT EXISTS { (:Venue)-[:EN_CALLE]->(c) }
+RETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, COUNT(r) AS reclamos
+GROUP BY c
+ORDER BY reclamos DESC
+LIMIT 20

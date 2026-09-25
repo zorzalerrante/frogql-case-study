@@ -9,7 +9,7 @@
 // es el JSON que exporta `redosm/exportar.py`, porque el navegador no tiene
 // sistema de archivos para abrir el `.gdb`.
 import init, { open_json } from "../vendor/frogql_wasm.js";
-import { MODOS, CAPAS, leerGrafo, ubicarFilas, etiquetasDe } from "../grafo.js";
+import { MODOS, CAPAS, leerGrafo, ubicarFilas, esRuta, etiquetasDe, textoDeLista } from "../grafo.js";
 import { parametrosDe, tramosDe, escribir, valoresDe } from "./parametros.js";
 import { estiloEntintado } from "./tinte.js";
 
@@ -37,9 +37,10 @@ const TOPE_ROTULOS = 30;
 const RADIO_TOQUE = 8;
 // Las etiquetas del grafo que tienen capa de puntos, y el campo del punto que
 // guarda cada identificador. Un parámetro sobre ese identificador se elige
-// tocando el punto en el mapa.
+// tocando el punto en el mapa. La `etiqueta` de un lugar no es única, pero es
+// lo que escriben las consultas: un nombre se lee y un `osm_id` no.
 const CAPA_DE = { Lugar: "lugares", Reclamo: "reclamos", Venue: "venues" };
-const CAMPO_DE = { reporte_id: "clave", venue_id: "clave", osm_id: "ref" };
+const CAMPO_DE = { reporte_id: "clave", venue_id: "clave", osm_id: "ref", etiqueta: "clave" };
 const NOMBRE_DE = { Lugar: "lugar", Reclamo: "reclamo", Venue: "venue", Calle: "calle" };
 const MOVIL = window.matchMedia("(max-width: 700px)");
 const SIN_MOVIMIENTO = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -169,11 +170,13 @@ async function arrancar() {
     tema: document.documentElement.dataset.estilo,
     modo: "auto",
     capas: new Set(),
-    // Lo que nombra el resultado, en magenta.
+    // Lo que nombra el resultado, en magenta. `tramos` son las cuadras de una
+    // ruta, que se encienden sin encender la calle entera.
     calles: new Set(),
+    tramos: [],
     puntos: [],
     // Lo que se mira ahora (una fila o una calle tocada), en el color de foco.
-    foco: { calles: new Set(), puntos: [] },
+    foco: { calles: new Set(), tramos: [], puntos: [] },
     seleccion: null,
     abierta: null,
   };
@@ -219,8 +222,9 @@ async function arrancar() {
   function rotulos() {
     const porCalle = new Map();
     const encendida = (calle) => estado.foco.calles.has(calle) || estado.calles.has(calle);
-    for (const t of grafo.redes[estado.modo]) {
-      if (!encendida(t.calle)) continue;
+    const enRuta = new Set([...estado.foco.tramos, ...estado.tramos]);
+    const enFoco = new Set(estado.foco.tramos.map((t) => t.calle));
+    for (const t of [...grafo.redes[estado.modo].filter((t) => encendida(t.calle)), ...enRuta]) {
       if (!porCalle.has(t.calle)) porCalle.set(t.calle, []);
       porCalle.get(t.calle).push([(t.x1 + t.x2) / 2, (t.y1 + t.y2) / 2]);
     }
@@ -233,11 +237,13 @@ async function arrancar() {
         if (Math.hypot(m[0] - cx, m[1] - cy) < Math.hypot(mejor[0] - cx, mejor[1] - cy)) mejor = m;
       }
       // La calle en foco gana cuando dos nombres se tapan.
-      const prioridad = estado.foco.calles.has(calle) ? 1 : 0;
+      const prioridad = estado.foco.calles.has(calle) || enFoco.has(calle) ? 1 : 0;
       salida.push({ posicion: mejor, texto: grafo.nombreDe.get(calle) ?? calle, prioridad });
     }
     return salida.sort((a, b) => b.prioridad - a.prioridad).slice(0, TOPE_ROTULOS);
   }
+
+  const tenue = ([r, g, b, a]) => [r, g, b, Math.round(a * 0.35)];
 
   function dibujar() {
     const tramos = grafo.redes[estado.modo];
@@ -259,7 +265,12 @@ async function arrancar() {
     const capas = [
       linea("red", tramos, colores.red, 1.4),
       linea("red-destacada", filtrar(estado.calles), colores.destacado, 4),
+      // Las cuadras de una ruta vienen de cualquier modo: la consulta la arma
+      // sobre las calles y no sobre la red que se está mirando.
+      // Con una ruta elegida entre varias, las demás quedan tenues.
+      linea("red-ruta", estado.tramos, estado.foco.tramos.length ? tenue(colores.destacado) : colores.destacado, 4),
       linea("red-foco", filtrar(estado.foco.calles), colores.foco, 6),
+      linea("red-ruta-foco", estado.foco.tramos, colores.foco, 6),
       ...[...capasVisibles()].map((nombre) =>
         puntos(`capa-${nombre}`, grafo.capas[nombre], colores[CAPAS[nombre].color], 4),
       ),
@@ -305,6 +316,7 @@ async function arrancar() {
     for (const t of grafo.redes[estado.modo]) {
       if (estado.foco.calles.has(t.calle)) xs.push(t.x1, t.x2), ys.push(t.y1, t.y2);
     }
+    for (const t of estado.foco.tramos) xs.push(t.x1, t.x2), ys.push(t.y1, t.y2);
     for (const p of estado.foco.puntos) xs.push(p.x), ys.push(p.y);
     if (!xs.length) return;
     mapa.fitBounds(caja(xs, ys), { padding: margenes(), maxZoom: 16.5, duration: duracion(500) });
@@ -321,8 +333,12 @@ async function arrancar() {
   /** Si la consulta abierta tiene un parámetro que se llena con esto, lo llena. */
   function llenarParametro(prueba, valor) {
     const consulta = estado.abierta;
-    const i = consulta?.parametros.findIndex(prueba) ?? -1;
-    if (i < 0) return false;
+    const aptos = (consulta?.parametros ?? []).flatMap((q, j) => (prueba(q) ? [j] : []));
+    if (!aptos.length) return false;
+    // Con dos parámetros que aceptan lo mismo, como el origen y el destino de
+    // una ruta, los toques se turnan entre ellos.
+    const i = aptos.find((j) => j > (consulta.ultimoLleno ?? -1)) ?? aptos[0];
+    consulta.ultimoLleno = i;
     consulta.valores[i] = valor;
     abrir(consulta, { correr: true });
     return true;
@@ -344,7 +360,7 @@ async function arrancar() {
     const nombre = grafo.nombreDe.get(calle);
     if (!nombre) return;
     const lleno = llenarParametro(esCalle, nombre);
-    estado.foco = { calles: new Set([calle]), puntos: [] };
+    estado.foco = { calles: new Set([calle]), tramos: [], puntos: [] };
     if (lleno && esMovil()) return dibujar();
     mostrarCalle(calle, nombre);
   }
@@ -370,7 +386,10 @@ async function arrancar() {
         el("button", {
           type: "button", class: "enlace-consulta",
           onclick: () => {
-            consulta.valores[consulta.parametros.findIndex(prueba)] = valor;
+            const i = consulta.parametros.findIndex(prueba);
+            // Un punto se nombra por distintos campos según la propiedad que
+            // pida el parámetro, así que el valor puede depender de él.
+            consulta.valores[i] = typeof valor === "function" ? valor(consulta.parametros[i]) : valor;
             abrir(consulta, { correr: true });
           },
         }, [el("span", { class: "n", text: consulta.numero }), consulta.titulo]),
@@ -400,7 +419,6 @@ async function arrancar() {
     if (p.capa === "venues") partes.push("Foursquare", contar(p.checkins ?? 0, "visita", "visitas"));
     const relato = p.texto?.trim();
     const id = (q) => capaDelParametro(q) === p.capa;
-    const campo = { reclamos: "clave", venues: "clave", lugares: "ref" }[p.capa];
     mostrarLectura("05", CAPAS[p.capa].etiqueta, p.titulo ?? p.clave, partes.filter(Boolean).join(" · "), [
       relato
         ? el("p", {
@@ -408,7 +426,7 @@ async function arrancar() {
             text: relato.length > LARGO_RELATO ? `"${relato.slice(0, LARGO_RELATO).trimEnd()}..."` : `"${relato}"`,
           })
         : null,
-      consultasPara(id, String(p[campo])),
+      consultasPara(id, (q) => String(p[CAMPO_DE[q.propiedad]])),
     ]);
   }
 
@@ -554,10 +572,11 @@ async function arrancar() {
   function mostrarEnMapa(consulta, resultado) {
     const ubicado = ubicarFilas(grafo, resultado?.filas, COLUMNAS_NO_UBICABLES);
     estado.calles = ubicado.calles;
+    estado.tramos = ubicado.tramos;
     estado.puntos = ubicado.puntos;
-    estado.foco = { calles: new Set(), puntos: [] };
+    estado.foco = { calles: new Set(), tramos: [], puntos: [] };
     const partes = [];
-    if (ubicado.calles.size) partes.push(contar(ubicado.calles.size, "calle", "calles"));
+    if (ubicado.nombradas) partes.push(contar(ubicado.nombradas, "calle", "calles"));
     if (ubicado.puntos.length) partes.push(contar(ubicado.puntos.length, "punto", "puntos"));
     estadoResultado.textContent = partes.length
       ? `${partes.join(" y ")} de la consulta ${consulta.numero}` +
@@ -657,7 +676,10 @@ async function arrancar() {
     if (capa) {
       // Un identificador: se elige tocando el punto o paso a paso.
       const campo = CAMPO_DE[p.propiedad];
-      const puntos = [...grafo.capas[capa]].sort((a, b) => String(a[campo]).localeCompare(String(b[campo])));
+      // Un valor por paso: los lugares sin nombre comparten etiqueta y, sin
+      // quitar los repetidos, el paso quedaría detenido en el primero.
+      const unicos = new Map(grafo.capas[capa].map((q) => [String(q[campo]), q]));
+      const puntos = [...unicos.values()].sort((a, b) => String(a[campo]).localeCompare(String(b[campo])));
       const actual = puntos.findIndex((q) => String(q[campo]) === consulta.valores[i]);
       const punto = puntos[actual];
       const paso = (d) => cambiar(String(puntos[(actual + d + puntos.length) % puntos.length][campo]));
@@ -694,8 +716,10 @@ async function arrancar() {
     const columnas = [...new Set(mostradas.flatMap((fila) => Object.keys(fila)))];
     let elegida = null;
     const enfocar = (fila, mover) => {
-      const ubicado = fila ? ubicarFilas(grafo, [fila], COLUMNAS_NO_UBICABLES) : { calles: new Set(), puntos: [] };
-      estado.foco = { calles: ubicado.calles, puntos: ubicado.puntos };
+      const ubicado = fila
+        ? ubicarFilas(grafo, [fila], COLUMNAS_NO_UBICABLES)
+        : { calles: new Set(), tramos: [], puntos: [] };
+      estado.foco = { calles: ubicado.calles, tramos: ubicado.tramos, puntos: ubicado.puntos };
       dibujar();
       if (mover) irAlFoco();
     };
@@ -707,7 +731,9 @@ async function arrancar() {
             ? "s/d"
             : typeof valor === "number"
               ? numero.format(valor)
-              : String(valor);
+              : Array.isArray(valor) || typeof valor === "object"
+                ? textoDeLista(valor)
+                : String(valor);
         return el("td", { class: texto.length > LARGO_TEXTO ? "largo" : "", text: texto });
       }));
       const elegir = () => {
@@ -726,6 +752,13 @@ async function arrancar() {
       if (!esMovil()) tr.addEventListener("mouseenter", () => enfocar(fila, false));
       return tr;
     });
+    // Si las filas son rutas, como los empates de la 06, la primera queda
+    // elegida: el mapa la muestra sobre las demás.
+    if (esRuta(mostradas[0])) {
+      elegida = cuerpo[0];
+      elegida.classList.add("elegida");
+      enfocar(mostradas[0], false);
+    }
     const cuerpoTabla = el("tbody", {}, cuerpo);
     // Al salir de la tabla vuelve la fila elegida, si hay.
     cuerpoTabla.addEventListener("mouseleave", () => enfocar(elegida ? mostradas[cuerpo.indexOf(elegida)] : null, false));

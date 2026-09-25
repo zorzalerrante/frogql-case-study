@@ -1,0 +1,17 @@
+-- Por qué calles se pasa para ir de una calle a otra.
+-- Busca las rutas con menos cambios de calle. Cada vuelta del grupo entre
+-- paréntesis dobla en una esquina: baja de la calle a una intersección que
+-- comparte con otra y sube a esa otra. `m` junta las calles intermedias y
+-- `x` e `y` las esquinas donde se dobla, en el orden en que se recorren, y
+-- con ellas el mapa enciende solo las cuadras de la ruta.
+-- Cuenta cambios de calle y no metros, así que suele haber empates: de Montau
+-- a Avenida La Paz hay once rutas que doblan tres veces, unas cortas y otras
+-- que bajan hasta el extremo sur de la comuna. ALL SHORTEST las devuelve
+-- todas, donde ANY SHORTEST elegiría una cualquiera. El motor no puede
+-- desempatar por metros, porque no suma distancias entre esquinas.
+-- En SQL este recorrido requiere una consulta recursiva.
+MATCH ALL SHORTEST (a:Calle) (<-[:EN_CALLE]-(x:Interseccion)-[:EN_CALLE]->(m:Calle))*
+                   <-[:EN_CALLE]-(y:Interseccion)-[:EN_CALLE]->(b:Calle)
+WHERE a.nombre = 'Montau' AND b.nombre = 'Avenida La Paz'
+RETURN a.nombre AS desde, m.nombre AS pasando_por, b.nombre AS hasta,
+       x AS esquinas, y AS ultima_esquina

@@ -9,23 +9,23 @@
  {
   "archivo": "02-ruido-por-calle.gql",
   "numero": "02",
-  "titulo": "Calles con más reclamos por ruido",
-  "explicacion": "`GROUP BY c` agrupa por la identidad del nodo, no por su nombre: dos calles homónimas de comunas distintas son dos nodos y quedan separadas.",
-  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)\nWHERE r.categoria = 'Ruido'\nRETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, COUNT(r) AS reclamos\nGROUP BY c\nORDER BY reclamos DESC\nLIMIT 20"
+  "titulo": "Calles con más reclamos por ruido, separando noche y fin de semana",
+  "explicacion": "`GROUP BY c` agrupa por la identidad del nodo, no por su nombre: dos calles homónimas de comunas distintas son dos nodos y quedan separadas. La noche va de las 22 a las 6 y el fin de semana es sábado y domingo (`dia_semana` 5 y 6). Separarlos distingue una avenida que reclama a toda hora de una calle cuyo ruido es de carrete.",
+  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)\nWHERE r.categoria = 'Ruido'\nRETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, COUNT(r) AS reclamos,\n       SUM(CASE WHEN r.hora >= 22 OR r.hora < 6 THEN 1 ELSE 0 END) AS de_noche,\n       SUM(CASE WHEN r.dia_semana >= 5 THEN 1 ELSE 0 END) AS fin_de_semana\nGROUP BY c\nORDER BY reclamos DESC\nLIMIT 20"
  },
  {
   "archivo": "03-locales-de-alcohol-en-calles-con-ruido.gql",
   "numero": "03",
-  "titulo": "Locales donde se consume o se vende alcohol, en calles con reclamos por ruido",
-  "explicacion": "El filtro va por `categoria`, que combina el tag y su valor en una sola propiedad, porque los locales relevantes están repartidos en dos tags de OSM: `amenity` para los de consumo en el local y `shop=alcohol` para las botillerías, que en Chile son el vector más directo de ruido en la vía pública. Filtrar solo por `amenity` las dejaba fuera. EXISTS resuelve la pertenencia sin unir cada local con cada reclamo de su calle. La consulta 11 hace la misma pregunta contando los reclamos.",
-  "gql": "MATCH (l:Lugar)-[:EN_CALLE]->(c:Calle)\nWHERE l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub',\n                      'amenity=restaurant', 'amenity=fast_food', 'shop=alcohol']\n  AND EXISTS { MATCH (r:Reclamo)-[:EN_CALLE]->(c) WHERE r.categoria = 'Ruido' }\nRETURN l.etiqueta AS lugar, l.categoria AS categoria, c.nombre AS calle, c.comuna AS comuna\nLIMIT 20"
+  "titulo": "Locales nocturnos y botillerías en calles con reclamos por ruido",
+  "explicacion": "El filtro va por `categoria`, que combina el tag y su valor en una sola propiedad, porque los locales relevantes están repartidos en dos tags de OSM: `amenity` para bares y discotecas y `shop=alcohol` para las botillerías, que en Chile son el vector más directo de ruido en la vía pública. Filtrar solo por `amenity` las dejaba fuera. Restaurantes y comida rápida quedan fuera porque llenaban el resultado de cadenas que no explican el ruido. EXISTS resuelve la pertenencia sin unir cada local con cada reclamo de su calle, así que no paga el producto de las dos etiquetas.",
+  "gql": "MATCH (l:Lugar)-[:EN_CALLE]->(c:Calle)\nWHERE l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'shop=alcohol']\n  AND EXISTS { MATCH (r:Reclamo)-[:EN_CALLE]->(c) WHERE r.categoria = 'Ruido' }\nRETURN l.etiqueta AS lugar, l.categoria AS categoria, c.nombre AS calle, c.comuna AS comuna\nLIMIT 20"
  },
  {
-  "archivo": "04-lugares-cercanos-al-ruido.gql",
+  "archivo": "04-cerca-pero-en-otra-calle.gql",
   "numero": "04",
-  "titulo": "Lugares con más reclamos por ruido a menos de 50 metros",
-  "explicacion": "CERCA_DE es proximidad geométrica, no pertenencia a la misma calle: un reclamo puede estar cerca de un lugar de la calle de atrás.",
-  "gql": "MATCH (r:Reclamo)-[:CERCA_DE]->(l:Lugar)\nWHERE r.categoria = 'Ruido'\nRETURN l.etiqueta AS lugar, l.categoria AS categoria, COUNT(r) AS reclamos\nGROUP BY l\nORDER BY reclamos DESC\nLIMIT 20"
+  "titulo": "Reclamos por ruido a menos de 50 metros de un lugar que está en otra calle",
+  "explicacion": "Es lo que el patrón por calle no ve: CERCA_DE es proximidad geométrica y EN_CALLE es pertenencia, y un reclamo en una esquina o en la calle de atrás queda cerca de un lugar sin compartir su calle. `c <> d` compara nodos, así que un tramo homónimo de otra calle cuenta como calle distinta.",
+  "gql": "MATCH (r:Reclamo)-[e:CERCA_DE]->(l:Lugar)-[:EN_CALLE]->(d:Calle),\n      (r)-[:EN_CALLE]->(c:Calle)\nWHERE r.categoria = 'Ruido' AND c <> d\nRETURN r.reporte_id AS reclamo, c.nombre AS calle_del_reclamo, l.etiqueta AS lugar,\n       d.nombre AS calle_del_lugar, e.distancia_m AS distancia_m\nORDER BY distancia_m\nLIMIT 20"
  },
  {
   "archivo": "05-calles-que-cruzan.gql",
@@ -35,46 +35,46 @@
   "gql": "MATCH (a:Calle)~[e:CRUZA_CON]~(b:Calle)\nWHERE a.nombre = 'Avenida Hipódromo Chile'\nRETURN b.nombre AS cruza_con, b.tipo AS tipo, e.esquinas AS esquinas\nORDER BY esquinas DESC\nLIMIT 20"
  },
  {
-  "archivo": "06-lugares-a-una-cuadra.gql",
+  "archivo": "06-ruta-entre-dos-calles.gql",
   "numero": "06",
-  "titulo": "Lugares en las calles que cruzan la calle de un reclamo",
-  "explicacion": "Extiende la consulta 01 un salto más: de la calle del reclamo a las calles que la cruzan, y de ahí a sus lugares.",
-  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)~[:CRUZA_CON]~(d:Calle)<-[:EN_CALLE]-(l:Lugar)\nWHERE r.reporte_id = '000050'\nRETURN d.nombre AS calle_vecina, l.etiqueta AS lugar, l.categoria AS categoria\nLIMIT 20"
+  "titulo": "Por qué calles se pasa para ir de una calle a otra",
+  "explicacion": "Busca las rutas con menos cambios de calle. Cada vuelta del grupo entre paréntesis dobla en una esquina: baja de la calle a una intersección que comparte con otra y sube a esa otra. `m` junta las calles intermedias y `x` e `y` las esquinas donde se dobla, en el orden en que se recorren, y con ellas el mapa enciende solo las cuadras de la ruta. Cuenta cambios de calle y no metros, así que suele haber empates: de Montau a Avenida La Paz hay once rutas que doblan tres veces, unas cortas y otras que bajan hasta el extremo sur de la comuna. ALL SHORTEST las devuelve todas, donde ANY SHORTEST elegiría una cualquiera. El motor no puede desempatar por metros, porque no suma distancias entre esquinas. En SQL este recorrido requiere una consulta recursiva.",
+  "gql": "MATCH ALL SHORTEST (a:Calle) (<-[:EN_CALLE]-(x:Interseccion)-[:EN_CALLE]->(m:Calle))*\n                   <-[:EN_CALLE]-(y:Interseccion)-[:EN_CALLE]->(b:Calle)\nWHERE a.nombre = 'Montau' AND b.nombre = 'Avenida La Paz'\nRETURN a.nombre AS desde, m.nombre AS pasando_por, b.nombre AS hasta,\n       x AS esquinas, y AS ultima_esquina"
  },
  {
-  "archivo": "07-barreras-modales.gql",
+  "archivo": "07-que-hay-a-pocas-cuadras.gql",
   "numero": "07",
-  "titulo": "Tramos por los que circula un auto y no una bicicleta",
-  "explicacion": "Son los bordes que separan las redes: autopista, enlaces y calles de servicio con acceso restringido.",
-  "gql": "MATCH (a:Interseccion)-[t:CONECTA_AUTO]->(b:Interseccion)\nWHERE NOT EXISTS { (a)~[:CONECTA_BICI]~(b) }\nRETURN t.calle AS calle, t.tipo AS tipo, t.largo_m AS largo_m\nORDER BY largo_m DESC\nLIMIT 20"
+  "titulo": "Qué tipos de lugares hay a menos de 300 metros caminando de un lugar dado",
+  "explicacion": "Saltar de calle en calle con CRUZA_CON no mide cercanía: une ejes con nombre completos, y un cruce desde el hospital llega al otro extremo de la comuna. Acá se camina la red peatonal desde la esquina del lugar y `sum(e.largo_m)` corta a los 300 metros, unas tres cuadras. Alrededor del Hospital San José aparecen el Instituto Nacional del Cáncer, una clínica, farmacias, florerías y una librería de ciencias médicas: el barrio de la salud. `~*` admite cero tramos, así que cuenta los lugares anclados a la misma esquina. Como en la 13, los metros son los del camino con menos cuadras. COUNT(DISTINCT l) cuenta cada lugar una vez y COLLECT junta sus nombres.",
+  "gql": "MATCH ANY SHORTEST (o:Lugar)-[:EN_ESQUINA]->(:Interseccion)\n                   ~[e:CONECTA_PEATON]~*\n                   (:Interseccion)<-[:EN_ESQUINA]-(l:Lugar)\nWHERE o.etiqueta = 'Hospital San José' AND l <> o\n  AND sum(e.largo_m) < 300\nRETURN l.categoria AS categoria, COUNT(DISTINCT l) AS lugares,\n       COLLECT(DISTINCT l.etiqueta) AS nombres\nGROUP BY l.categoria\nORDER BY lugares DESC\nLIMIT 20"
  },
  {
-  "archivo": "08-ruido-por-zona-censal.gql",
+  "archivo": "08-vida-nocturna-que-osm-no-tiene.gql",
   "numero": "08",
-  "titulo": "Reclamos por ruido y población de cada zona censal",
-  "explicacion": "Cruza el reporte ciudadano con el Censo 2024 sin salir del grafo.",
-  "gql": "MATCH (r:Reclamo)-[:EN_ZONA]->(z:ZonaCensal)\nWHERE r.categoria = 'Ruido'\nRETURN z.zona_id AS zona, z.comuna AS comuna, z.n_per AS poblacion,\n       z.n_hog_unipersonales AS hogares_unipersonales, COUNT(r) AS reclamos\nGROUP BY z\nORDER BY reclamos DESC\nLIMIT 20"
+  "titulo": "Calles con vida nocturna en Foursquare y ningún local nocturno en OSM",
+  "explicacion": "Ubica el vacío que describe la consulta 12: OSM casi no mapea bares en Chile, y la capa de Foursquare los registra en calles donde el mapa no tiene ninguno. Cruza dos fuentes sin salir del grafo porque las dos cuelgan de la misma calle.",
+  "gql": "MATCH (v:Venue)-[:EN_CALLE]->(c:Calle)\nWHERE v.categoria IN ['Bar', 'Dive Bar', 'Pub', 'Nightclub', 'Brewery',\n                      'Beer Garden', 'Gay Bar', 'Gastropub', 'Rock Club',\n                      'Karaoke Bar', 'Lounge', 'Cocktail Bar', 'Sports Bar',\n                      'Wine Bar', 'Music Venue', 'Strip Club', 'Other Nightlife']\n  AND NOT EXISTS { MATCH (l:Lugar)-[:EN_CALLE]->(c)\n                   WHERE l.categoria IN ['amenity=bar', 'amenity=pub',\n                                         'amenity=nightclub', 'shop=alcohol'] }\nRETURN c.nombre AS calle, c.comuna AS comuna, COUNT(v) AS venues,\n       SUM(v.checkins) AS checkins\nGROUP BY c\nORDER BY checkins DESC\nLIMIT 20"
  },
  {
-  "archivo": "09-calles-sin-lugares.gql",
+  "archivo": "09-ruido-en-calles-sin-comercio.gql",
   "numero": "09",
-  "titulo": "Calles con reclamos por ruido y sin ningún lugar registrado en OSM",
-  "explicacion": "Mide dónde el mapa colaborativo está menos completo que el reporte ciudadano: hay actividad suficiente para reclamar y no hay POI mapeados.",
-  "gql": "MATCH (c:Calle)\nWHERE EXISTS { (:Reclamo)-[:EN_CALLE]->(c) }\n  AND NOT EXISTS { (:Lugar)-[:EN_CALLE]->(c) }\nRETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, c.largo_m AS largo_m\nORDER BY largo_m DESC\nLIMIT 20"
+  "titulo": "Calles con reclamos por ruido y sin ningún lugar ni venue registrado",
+  "explicacion": "Sin comercio en la calle, el ruido es vecinal: fiestas, perros, música de un departamento. También puede ser un vacío del mapa, porque OSM y Foursquare no registran todo lo que hay.",
+  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)\nWHERE r.categoria = 'Ruido'\n  AND NOT EXISTS { (:Lugar)-[:EN_CALLE]->(c) }\n  AND NOT EXISTS { (:Venue)-[:EN_CALLE]->(c) }\nRETURN c.nombre AS calle, c.comuna AS comuna, c.tipo AS tipo, COUNT(r) AS reclamos\nGROUP BY c\nORDER BY reclamos DESC\nLIMIT 20"
  },
  {
-  "archivo": "10-origen-de-la-asignacion.gql",
+  "archivo": "10-ruido-lejos-de-la-vida-nocturna.gql",
   "numero": "10",
-  "titulo": "Cómo se asignó cada lugar a su calle",
-  "explicacion": "`declarada` viene del tag addr:street del propio lugar; `cercania` es el eje con nombre más próximo. La distinción queda en el grafo para que cualquier consulta pueda descartar las asignaciones menos confiables.",
-  "gql": "MATCH (l:Lugar)-[e:EN_CALLE]->(c:Calle)\nRETURN e.origen AS origen, COUNT(l) AS lugares\nGROUP BY e.origen\nORDER BY lugares DESC"
+  "titulo": "Cruces entre cada reclamo por ruido y el local nocturno más cercano",
+  "explicacion": "ANY SHORTEST encuentra el camino con menos cruces entre cada reclamo y cada bar, pub, discoteca o botillería, y MIN se queda con el más cercano. Se restan las dos aristas EN_CALLE de los extremos, así que 0 es un local en la misma calle. Los primeros de la lista son ruido que ningún local explica. Calcula un camino por cada par de reclamo y local, así que es la consulta más cara del conjunto y está pensada para la escala de una comuna.",
+  "gql": "MATCH p = ANY SHORTEST (r:Reclamo)-[:EN_CALLE]->(c:Calle)~[:CRUZA_CON]~*(:Calle)<-[:EN_CALLE]-(l:Lugar)\nWHERE r.categoria = 'Ruido'\n  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'shop=alcohol']\nRETURN r.reporte_id AS reclamo, c.nombre AS calle, MIN(path_length(p)) - 2 AS cruces\nGROUP BY r, c\nORDER BY cruces DESC\nLIMIT 20"
  },
  {
-  "archivo": "11-reclamos-de-ruido-por-local.gql",
+  "archivo": "11-camino-al-local-mas-cercano.gql",
   "numero": "11",
-  "titulo": "Cuántos reclamos por ruido tiene la calle de cada local con alcohol",
-  "explicacion": "`GROUP BY l, c` agrupa por la identidad de los nodos, así que dos locales que comparten nombre no suman sus reclamos. Es la consulta más cara del conjunto. Contar exige unir cada local con cada reclamo de su calle, y en una avenida con mil reclamos y cien locales eso son cien mil filas antes de agrupar. La consulta 03 responde la versión sin conteo con EXISTS y no paga ese producto.",
-  "gql": "MATCH (r:Reclamo)-[:EN_CALLE]->(c:Calle)<-[:EN_CALLE]-(l:Lugar)\nWHERE r.categoria = 'Ruido'\n  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub',\n                      'amenity=restaurant', 'amenity=fast_food', 'shop=alcohol']\nRETURN l.etiqueta AS lugar, l.categoria AS categoria, c.nombre AS calle, c.comuna AS comuna,\n       COUNT(r) AS reclamos_en_la_calle\nGROUP BY l, c\nORDER BY reclamos_en_la_calle DESC\nLIMIT 20"
+  "titulo": "Cómo se llega de un reclamo a los locales nocturnos más cercanos",
+  "explicacion": "Es la consulta 10 para un solo reclamo, con el camino a la vista. Cada vuelta del grupo dobla en una esquina que comparten dos calles: `m` junta las calles intermedias, `x` las esquinas, y ORDER BY path_length(p) deja primero los locales a menos cambios de calle. Con las esquinas el mapa enciende solo las cuadras que se recorren. El reclamo de ejemplo está en una calle residencial a tres cambios de calle del local más cercano.",
+  "gql": "MATCH p = ANY SHORTEST (r:Reclamo)-[:EN_CALLE]->(c:Calle)\n          (<-[:EN_CALLE]-(x:Interseccion)-[:EN_CALLE]->(m:Calle))*\n          (<-[:EN_CALLE]-(l:Lugar))\nWHERE r.reporte_id = '000072'\n  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'shop=alcohol']\nRETURN r.reporte_id AS reclamo, l.etiqueta AS lugar, l.categoria AS categoria,\n       c.nombre AS desde, m.nombre AS pasando_por, x AS esquinas\nORDER BY path_length(p)\nLIMIT 5"
  },
  {
   "archivo": "12-vida-nocturna-de-foursquare.gql",
@@ -87,7 +87,7 @@
   "archivo": "13-botilleria-mas-cercana.gql",
   "numero": "13",
   "titulo": "La botillería o el bar más cercano al reclamo, caminando",
-  "explicacion": "Las otras consultas preguntan por la calle, que es una relación guardada. Esta pregunta por distancia, que hay que recorrer: `~+` camina la red de esquinas hasta donde haga falta y `sum(e.largo_m)` suma los metros del camino, así que el resultado está en metros y no en saltos. EN_ESQUINA es lo que lo hace posible. EN_CALLE cuelga el punto del eje con nombre completo, que puede medir kilómetros; EN_ESQUINA lo ancla además a la intersección más cercana, que es donde empieza y termina la caminata. ANY SHORTEST se queda con un camino por par de extremos. Sin eso el motor enumera todos los caminos posibles entre las dos puntas, que son millones.",
+  "explicacion": "Las otras consultas preguntan por la calle, que es una relación guardada. Esta pregunta por distancia, que hay que recorrer: `~+` camina la red de esquinas hasta donde haga falta y `sum(e.largo_m)` suma los metros del camino, así que el resultado está en metros y no en saltos. EN_ESQUINA es lo que lo hace posible. EN_CALLE cuelga el punto del eje con nombre completo, que puede medir kilómetros; EN_ESQUINA lo ancla además a la intersección más cercana, que es donde empieza y termina la caminata. ANY SHORTEST se queda con un camino por par de extremos: el de menos cuadras, no el de menos metros, porque SHORTEST cuenta aristas y no las pondera. `metros` es el largo de ese camino. En una cuadrícula los dos casi coinciden, pero entre dos caminos con las mismas cuadras el motor elige cualquiera y los metros pueden variar. Sin ANY SHORTEST el motor enumera todos los caminos posibles entre las dos puntas, que son millones.",
   "gql": "MATCH ANY SHORTEST (r:Reclamo)-[:EN_ESQUINA]->(i:Interseccion)\n                   ~[e:CONECTA_PEATON]~+\n                   (j:Interseccion)<-[:EN_ESQUINA]-(l:Lugar)\nWHERE r.reporte_id = '000050'\n  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'shop=alcohol']\n  AND sum(e.largo_m) < 600\nRETURN l.etiqueta AS local, l.categoria AS categoria, sum(e.largo_m) AS metros\nORDER BY metros\nLIMIT 10"
  }
 ]

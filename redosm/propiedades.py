@@ -28,6 +28,8 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import shapely
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import connected_components
 from scipy.spatial import cKDTree
 
 from redosm import calles as mod_calles
@@ -368,10 +370,12 @@ def construir(
 
     # --- Anclaje de cada punto en la red ------------------------------
     antes = len(grafo.aristas)
-    _anclar_en_la_red(grafo, lugares, ids_lugar, nodos_red)
-    _anclar_en_la_red(grafo, reclamos, ids_reclamo, nodos_red)
+    anclas = _componente_mayor(nodos_red, segmentos[segmentos["permite_peaton"]])
+    avisar(f"Intersecciones donde anclar (componente peatonal mayor): {len(anclas)}")
+    _anclar_en_la_red(grafo, lugares, ids_lugar, anclas)
+    _anclar_en_la_red(grafo, reclamos, ids_reclamo, anclas)
     if venues is not None and not venues.empty:
-        _anclar_en_la_red(grafo, venues, ids_venue, nodos_red)
+        _anclar_en_la_red(grafo, venues, ids_venue, anclas)
     avisar(f"EN_ESQUINA: {len(grafo.aristas) - antes}")
 
     # --- Proximidad entre reclamos y lugares --------------------------
@@ -406,6 +410,32 @@ def _categoria_lugar(fila: dict) -> str:
         if valor:
             return f"{llave}={valor}"
     return "sin_categoria"
+
+
+def _componente_mayor(nodos_red: gpd.GeoDataFrame, tramos: pd.DataFrame) -> gpd.GeoDataFrame:
+    """Las intersecciones de la componente conexa más grande de `tramos`.
+
+    La intersección más cercana a un punto puede quedar en una isla de la red:
+    la calle de servicio interna de un hospital, un pasaje sin salida cortado
+    por el recorte del área. Un punto anclado ahí no llega caminando a ninguna
+    parte, y una consulta que acota la caminata con `sum(e.largo_m)` lo deja
+    sin vecinos. Anclar solo en la componente mayor cuesta unos metros más de
+    distancia al ancla y garantiza que desde cualquier punto se llegue a
+    cualquier otro.
+    """
+    ids_nodo = nodos_red["nodo_id"].to_numpy()
+    posicion = pd.Series(np.arange(len(ids_nodo)), index=ids_nodo)
+    u = posicion.reindex(tramos["u"].to_numpy()).to_numpy()
+    v = posicion.reindex(tramos["v"].to_numpy()).to_numpy()
+    matriz = coo_matrix((np.ones(len(u)), (u, v)), shape=(len(ids_nodo), len(ids_nodo)))
+    _, etiquetas = connected_components(matriz, directed=False)
+    # Las intersecciones sin tramos del modo forman componentes de un nodo y
+    # no compiten con la mayor, que se elige entre las que tienen tramos.
+    usadas = np.zeros(len(ids_nodo), dtype=bool)
+    usadas[u] = True
+    usadas[v] = True
+    mayor = np.bincount(etiquetas[usadas]).argmax()
+    return nodos_red[(etiquetas == mayor) & usadas]
 
 
 def _anclar_en_la_red(

@@ -232,6 +232,11 @@
   }
   td { border-bottom: 1px solid var(--linea); font-variant-numeric: tabular-nums; }
   td.largo { white-space: normal; min-width: 15rem; }
+  /* Las filas que son rutas se eligen para verlas solas en el mapa. */
+  tr.ruta { cursor: pointer; }
+  tr.ruta td:first-child { box-shadow: inset 3px 0 0 transparent; padding-left: 8px; }
+  tr.ruta.elegida td { background: color-mix(in srgb, var(--magenta) 12%, transparent); }
+  tr.ruta.elegida td:first-child { box-shadow: inset 3px 0 0 var(--magenta); }
   .sin-filas { margin: 12px 0 0; font-size: 0.82rem; color: var(--tenue); }
 
   footer {

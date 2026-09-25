@@ -13,6 +13,10 @@ export function crearMapa(canvas, conexion, colores, alTocar) {
 
   let modo = "auto";
   let destacadas = new Set();
+  // Las cuadras de una ruta, que se encienden sin encender su calle entera.
+  let cuadrasDestacadas = [];
+  // La ruta elegida entre varias. Con una elegida, las demás se atenúan.
+  let cuadrasElegidas = [];
   let puntosDestacados = [];
   let zoom = 1;
   let centro = { x: (limites.xmin + limites.xmax) / 2, y: (limites.ymin + limites.ymax) / 2 };
@@ -78,6 +82,26 @@ export function crearMapa(canvas, conexion, colores, alTocar) {
       }
       ctx.stroke();
     }
+
+    // Una ruta se dibuja con las cuadras de cualquier modo, porque la consulta
+    // la arma sobre las calles y no sobre la red que se está mirando.
+    const trazar = (tramosRuta, ancho, alfa) => {
+      if (!tramosRuta.length) return;
+      ctx.globalAlpha = alfa;
+      ctx.strokeStyle = colores.destacado;
+      ctx.lineWidth = ancho;
+      ctx.beginPath();
+      for (const t of tramosRuta) {
+        const [ax, ay] = proyectar(t.x1, t.y1);
+        const [bx, by] = proyectar(t.x2, t.y2);
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    };
+    trazar(cuadrasDestacadas, grosor + 1.6, cuadrasElegidas.length ? 0.35 : 1);
+    trazar(cuadrasElegidas, grosor + 3, 1);
 
     const radio = Math.min(4.5, RADIO_PUNTO + zoom * 0.35);
     for (const nombre of visibles) {
@@ -232,20 +256,31 @@ export function crearMapa(canvas, conexion, colores, alTocar) {
     destacar(filas, columnasIgnoradas = new Set()) {
       const ubicado = ubicarFilas(grafo, filas, columnasIgnoradas);
       destacadas = ubicado.calles;
+      cuadrasDestacadas = ubicado.tramos;
+      cuadrasElegidas = [];
       puntosDestacados = ubicado.puntos;
       dibujar();
-      return { calles: destacadas.size, puntos: puntosDestacados.length, ambiguos: ubicado.ambiguos };
+      return { calles: ubicado.nombradas, puntos: puntosDestacados.length, ambiguos: ubicado.ambiguos };
+    },
+    /** Resalta una de las rutas del resultado sobre las demás, o ninguna. */
+    elegirRuta(fila, columnasIgnoradas = new Set()) {
+      cuadrasElegidas = fila ? ubicarFilas(grafo, [fila], columnasIgnoradas).tramos : [];
+      dibujar();
     },
     /** Enciende nodos concretos, como los que devuelve el inspector de constantes. */
     destacarNodos(nodos) {
       const ubicado = ubicarNodos(grafo, nodos);
       destacadas = ubicado.calles;
+      cuadrasDestacadas = [];
+      cuadrasElegidas = [];
       puntosDestacados = ubicado.puntos;
       dibujar();
       return { calles: destacadas.size, puntos: puntosDestacados.length };
     },
     limpiar() {
       destacadas = new Set();
+      cuadrasDestacadas = [];
+      cuadrasElegidas = [];
       puntosDestacados = [];
       dibujar();
     },

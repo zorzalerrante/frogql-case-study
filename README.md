@@ -42,12 +42,12 @@ Escanilla                                                       Mi Chimbote
 | Segmentos entre intersecciones | 3551 | 413 831 |
 | Largo de la red | 185 km | 21 835 km |
 | Calles (ejes con nombre) | 325 | 38 427 |
-| Puntos de interés | 675 | 45 613 |
+| Puntos de interés | 676 | 45 613 |
 | Reclamos SOSAFE | 226 | 21 880 |
 | Zonas censales | 26 | 1639 |
-| Venues de Foursquare | 822 | 64 382 |
-| **Nodos del grafo** | **4684** | **460 766** |
-| **Aristas del grafo** | **15 608** | **1 687 173** |
+| Venues de Foursquare | 823 | 64 382 |
+| **Nodos del grafo** | **4686** | **460 766** |
+| **Aristas del grafo** | **15 612** | **1 687 173** |
 
 El Gran Santiago se define como las 32 comunas de la Provincia de Santiago más
 Puente Alto y San Bernardo, recortadas al rectángulo que el curso de datos
@@ -105,33 +105,39 @@ siete gigabytes de memoria. Las mediciones son de una máquina con 20 núcleos y
 | `.gdb` construido por froGQL | 2.3 MB | 233.4 MB |
 | Importación del JSON | 0.2 s | 20.8 s |
 
-Los tiempos de las consultas en una corrida, con froGQL 0.5.1. Cada
-consulta se corre completa: el parámetro `limit` de `execute()` es un tope de
-ejecución y no de presentación, así que el motor deja de producir filas al
-alcanzarlo y el tiempo medido dejaría de corresponder a la consulta escrita. El
-script lo deja en 0 y cada archivo `.gql` declara su propio `LIMIT`, que se
-aplica después del `ORDER BY`.
+Los tiempos de las trece consultas, con froGQL 0.5.9 y la mediana de tres
+corridas. Cada consulta se corre completa: el parámetro `limit` de `execute()`
+es un tope de ejecución y no de presentación, así que el motor deja de producir
+filas al alcanzarlo y el tiempo medido dejaría de corresponder a la consulta
+escrita. El script lo deja en 0 y cada archivo `.gql` declara su propio
+`LIMIT`, que se aplica después del `ORDER BY`.
 
 | Consulta | Independencia | Gran Santiago |
 |---|---|---|
-| `01-lugares-en-la-misma-calle` | 1.5 ms | 0.5 ms |
-| `06-lugares-a-una-cuadra` | 1.1 ms | 1.8 ms |
-| `05-calles-que-cruzan` | 0.9 ms | 88 ms |
-| `04-lugares-cercanos-al-ruido` | 0.8 ms | 102 ms |
-| `08-ruido-por-zona-censal` | 1.7 ms | 251 ms |
-| `02-ruido-por-calle` | 2.0 ms | 670 ms |
-| `10-origen-de-la-asignacion` | 2.4 ms | 830 ms |
-| `03-locales-de-alcohol-en-calles-con-ruido` | 4.3 ms | 903 ms |
-| `11-reclamos-de-ruido-por-local` | 11.6 ms | 1.9 s |
-| `12-vida-nocturna-de-foursquare` | 6.9 ms | 2.2 s |
-| `09-calles-sin-lugares` | 7.4 ms | 2.8 s |
-| `07-barreras-modales` | 13.2 ms | 4.2 s |
+| `05-calles-que-cruzan` | 0.7 ms | 88 ms |
+| `04-cerca-pero-en-otra-calle` | 0.9 ms | pendiente |
+| `01-lugares-en-la-misma-calle` | 1.1 ms | 0.5 ms |
+| `02-ruido-por-calle` | 2.1 ms | pendiente |
+| `09-ruido-en-calles-sin-comercio` | 3.4 ms | pendiente |
+| `03-locales-de-alcohol-en-calles-con-ruido` | 5.3 ms | pendiente |
+| `12-vida-nocturna-de-foursquare` | 5.9 ms | 2.2 s |
+| `08-vida-nocturna-que-osm-no-tiene` | 6.6 ms | pendiente |
+| `13-botilleria-mas-cercana` | 46 ms | pendiente |
+| `07-que-hay-a-pocas-cuadras` | 48 ms | pendiente |
+| `06-ruta-entre-dos-calles` | 503 ms | pendiente |
+| `11-camino-al-local-mas-cercano` | 924 ms | pendiente |
+| `10-ruido-lejos-de-la-vida-nocturna` | 2.6 s | pendiente |
+
+La columna del Gran Santiago viene de la corrida anterior, con froGQL 0.5.1, y
+solo trae las consultas que no cambiaron desde entonces. Las demás se llenan con
+la próxima corrida sobre la ciudad.
 
 Las consultas que parten de un nodo identificado mantienen su costo al cambiar
 de escala: `01` tarda medio milisegundo sobre los 460 mil nodos de la ciudad.
-Las que recorren una etiqueta completa crecen con el tamaño de esa etiqueta, y
-las más caras son las que recorren las tres de circulación, que son las que más
-aristas tienen.
+Las que recorren una etiqueta completa crecen con el tamaño de esa etiqueta.
+Las más caras son las cinco que buscan caminos con `SHORTEST`, porque
+recorren la red de calles hasta encontrar el destino, y la `10` calcula uno por
+cada par de reclamo y local: está pensada para una comuna y no para la ciudad.
 
 Los índices no explican esa diferencia. froGQL construye índices automáticos
 sobre los pares `(etiqueta, propiedad)` de valor único al abrir la base, y en
@@ -141,14 +147,15 @@ escalas. Declarar un BTREE sobre `Reclamo.categoria`, que es la propiedad por la
 que filtran casi todas las demás, no cambia sus tiempos: el costo está en
 recorrer las aristas, no en encontrar los reclamos.
 
-Las consultas `03` y `11` preguntan lo mismo con dos formulaciones. La `03` usa
-`EXISTS` para saber si la calle tiene algún reclamo por ruido; la `11` cuenta
-esos reclamos con `GROUP BY`. Contar obliga a unir cada local con cada reclamo
-de su calle, así que su costo crece con el producto de las dos etiquetas y no
-con la suma. Con la quincena publicada la diferencia es de dos veces, 0.9
-segundos contra 1.9. Sobre el año 2024 completo, que multiplica por 26 los
-reclamos, la misma comparación da 3.5 segundos contra 236: el patrón de la `11`
-es el que primero se degrada al crecer los datos.
+La forma de escribir una pregunta también pesa. La `03` usa `EXISTS` para saber
+si la calle de cada local tiene algún reclamo por ruido. Una versión anterior
+del conjunto hacía la misma pregunta contando esos reclamos con `GROUP BY`, y
+contar obliga a unir cada local con cada reclamo de su calle, así que su costo
+crece con el producto de las dos etiquetas y no con la suma. Con la quincena
+publicada la diferencia era de dos veces, 0.9 segundos contra 1.9. Sobre el año
+2024 completo, que multiplica por 26 los reclamos, la misma comparación daba 3.5
+segundos contra 236: contar es el patrón que primero se degrada al crecer los
+datos.
 
 ## Cómo se corre
 
@@ -214,17 +221,17 @@ Seis tipos de nodo y ocho de arista.
 |---|---|---|---|
 | `Calle` | 325 | 38 427 | `nombre`, `comuna`, `tipo`, `largo_m`, `segmentos`, `permite_auto`, `permite_bici`, `permite_peaton` |
 | `Interseccion` | 2610 | 288 825 | `lon`, `lat`, `grado` |
-| `Lugar` | 675 | 45 613 | `etiqueta`, `nombre`, `categoria`, `amenity`, `shop`, `direccion_calle`, `lon`, `lat` |
+| `Lugar` | 676 | 45 613 | `etiqueta`, `nombre`, `categoria`, `amenity`, `shop`, `direccion_calle`, `lon`, `lat` |
 | `Reclamo` | 226 | 21 880 | `reporte_id`, `categoria`, `grupo`, `fecha`, `hora`, `descripcion`, `lon`, `lat` |
-| `Venue` | 822 | 64 382 | `venue_id`, `categoria`, `checkins`, `lon`, `lat` |
+| `Venue` | 823 | 64 382 | `venue_id`, `categoria`, `checkins`, `lon`, `lat` |
 | `ZonaCensal` | 26 | 1639 | `zona_id`, `n_per`, `n_hog`, `prom_edad`, `n_transporte_*` |
 
 | Arista | Independencia | Gran Santiago | Sentido | De | A |
 |---|---|---|---|---|---|
-| `EN_CALLE` | 3961 | 408 501 | dirigida | `Interseccion`, `Lugar`, `Reclamo`, `Venue` | `Calle` |
+| `EN_CALLE` | 3963 | 408 501 | dirigida | `Interseccion`, `Lugar`, `Reclamo`, `Venue` | `Calle` |
 | `CERCA_DE` | 253 | 40 057 | dirigida | `Reclamo` | `Lugar` (a menos de 50 m) |
 | `EN_ZONA` | 1722 | 130 320 | dirigida | `Lugar`, `Reclamo`, `Venue` | `ZonaCensal` |
-| `EN_ESQUINA` | 1723 | — | dirigida | `Lugar`, `Reclamo`, `Venue` | `Interseccion` más cercana |
+| `EN_ESQUINA` | 1725 | — | dirigida | `Lugar`, `Reclamo`, `Venue` | `Interseccion` más cercana de la red peatonal conexa |
 | `CONECTA_AUTO` | 3527 | 420 994 | dirigida | `Interseccion` | `Interseccion` |
 | `CONECTA_PEATON` | 2931 | 342 921 | no dirigida | `Interseccion` | `Interseccion` |
 | `CONECTA_BICI` | 2400 | 257 392 | no dirigida | `Interseccion` | `Interseccion` |
@@ -248,16 +255,16 @@ de la consulta.
 | Archivo | Qué responde |
 |---|---|
 | `01-lugares-en-la-misma-calle.gql` | Lugares en la misma calle que un reclamo dado |
-| `02-ruido-por-calle.gql` | Calles con más reclamos por ruido |
-| `03-locales-de-alcohol-en-calles-con-ruido.gql` | Locales con venta o consumo de alcohol en calles con reclamos |
-| `04-lugares-cercanos-al-ruido.gql` | Lugares con más reclamos por ruido a menos de 50 m |
+| `02-ruido-por-calle.gql` | Calles con más reclamos por ruido, separando noche y fin de semana |
+| `03-locales-de-alcohol-en-calles-con-ruido.gql` | Locales nocturnos y botillerías en calles con reclamos por ruido |
+| `04-cerca-pero-en-otra-calle.gql` | Reclamos a menos de 50 m de un lugar de otra calle |
 | `05-calles-que-cruzan.gql` | Calles que cruzan una calle dada |
-| `06-lugares-a-una-cuadra.gql` | Lugares en las calles que cruzan la del reclamo |
-| `07-barreras-modales.gql` | Tramos por los que circula un auto y no una bicicleta |
-| `08-ruido-por-zona-censal.gql` | Reclamos por ruido y población de cada zona censal |
-| `09-calles-sin-lugares.gql` | Calles con reclamos y sin ningún lugar mapeado |
-| `10-origen-de-la-asignacion.gql` | Cómo se asignó cada lugar a su calle |
-| `11-reclamos-de-ruido-por-local.gql` | Cuántos reclamos por ruido tiene la calle de cada local |
+| `06-ruta-entre-dos-calles.gql` | Por qué calles se pasa para ir de una calle a otra |
+| `07-que-hay-a-pocas-cuadras.gql` | Qué tipos de lugares hay a menos de 300 metros caminando de un lugar dado |
+| `08-vida-nocturna-que-osm-no-tiene.gql` | Calles con vida nocturna en Foursquare y ningún local nocturno en OSM |
+| `09-ruido-en-calles-sin-comercio.gql` | Calles con reclamos por ruido y sin lugares ni venues |
+| `10-ruido-lejos-de-la-vida-nocturna.gql` | A cuántos cruces queda el local nocturno más cercano a cada reclamo |
+| `11-camino-al-local-mas-cercano.gql` | Por qué calles y esquinas se llega de un reclamo a los locales más cercanos |
 | `12-vida-nocturna-de-foursquare.gql` | Vida nocturna de Foursquare en calles con reclamos |
 | `13-botilleria-mas-cercana.gql` | La botillería o el bar más cercano al reclamo, caminando |
 
@@ -266,6 +273,9 @@ identificadores son correlativos por fecha dentro de cada área, así que el mis
 número apunta a reportes distintos en las dos escalas y en una de ellas puede
 caer en una calle sin lugares mapeados. `03-consultas.py` busca un reclamo por
 ruido que sí los tenga y lo sustituye antes de correr las consultas.
+La `11` trae su propio identificador, `'000072'`, que no se sustituye: en
+Independencia es un reclamo en una calle residencial a tres calles del local
+más cercano, y un reclamo con lugares en su calle daría un camino vacío.
 
 Para consultar desde el REPL:
 
@@ -343,7 +353,8 @@ código daría resultados distintos en cada una.
 
 Las zonas censales van aparte porque esa cartografía se publica entera, con el
 país completo, y son 758 MB para quedarse con las zonas de un área. Sin ellas
-el grafo se arma igual, sin nodos `ZonaCensal`, y la consulta `08` queda vacía.
+el grafo se arma igual, sin nodos `ZonaCensal`. Ninguna de las trece consultas
+los usa: quedan en el grafo para cruzar el reporte ciudadano con la población.
 
 Cada capa admite una variable de entorno para apuntar a una copia propia:
 `FROGQL_SOSAFE`, `FROGQL_VENUES`, `FROGQL_CHECKINS` y `FROGQL_ZONAS`. Esa es la
@@ -444,12 +455,12 @@ son 423 para seis millones de habitantes.
 
 Dos cosas compensan esa ausencia. La primera es que OSM sí mapea las botillerías,
 que en Chile son el vector más directo del ruido en la vía pública: 19 en
-Independencia y 825 en el Gran Santiago con `shop=alcohol`. Las consultas `03` y
-`11` las ignoraban mientras filtraban por `amenity`; ahora filtran por
-`categoria`, que combina el tag con su valor, y en Independencia el resultado
-pasa de una veintena de locales a 80. La segunda es la capa de Foursquare, que
-registra 26 locales nocturnos en Independencia y 3264 en el Gran Santiago, y que
-la consulta `12` usa para esa categoría. El precio es que sus venues no traen
+Independencia y 825 en el Gran Santiago con `shop=alcohol`. Las consultas que
+buscan locales nocturnos (`03`, `10` y `11`) filtran por `categoria`, que
+combina el tag con su valor, para sumar las botillerías a los bares: en
+Independencia son 22 locales en vez de tres. La segunda es la capa de
+Foursquare, que registra 26 locales nocturnos en Independencia y 3264 en el
+Gran Santiago, y que las consultas `08` y `12` usan para esa categoría. El precio es que sus venues no traen
 nombre y que los check-ins son de 2012, así que sitúan el fenómeno sin
 identificar un local vigente.
 
@@ -463,7 +474,9 @@ referencias identificables. Los venues de Foursquare de categoría residencial
 (`Home (private)`, `Residential Building`) quedan fuera del grafo, porque
 publicar su ubicación expone domicilios particulares.
 
-**La cobertura de OSM no es uniforme.** La consulta 09 lista las calles que
-tienen reclamos ciudadanos y ningún lugar mapeado. La diferencia mide dónde el
-mapa colaborativo está menos completo que el reporte ciudadano, no dónde no hay
-actividad.
+**La cobertura de OSM no es uniforme.** La consulta 08 lista las calles donde
+Foursquare registra vida nocturna y OSM no tiene ningún local nocturno: en
+Independencia son 16 de las 19 calles con locales nocturnos de Foursquare. La
+09 lista las calles con reclamos por ruido y sin lugares ni venues, que pueden
+ser ruido vecinal o un vacío de las dos fuentes: la ausencia en el mapa no
+prueba que la calle no tenga actividad.

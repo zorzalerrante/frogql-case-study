@@ -209,15 +209,16 @@ ETIQUETAS_CONSULTA = {
     "01-lugares-en-la-misma-calle": "lugares en la misma calle",
     "02-ruido-por-calle": "ruido por calle",
     "03-locales-de-alcohol-en-calles-con-ruido": "locales de alcohol en calles con ruido",
-    "04-lugares-cercanos-al-ruido": "lugares cercanos al ruido",
+    "04-cerca-pero-en-otra-calle": "cerca pero en otra calle",
     "05-calles-que-cruzan": "calles que cruzan",
-    "06-lugares-a-una-cuadra": "lugares a una cuadra",
-    "07-barreras-modales": "barreras modales",
-    "08-ruido-por-zona-censal": "ruido por zona censal",
-    "09-calles-sin-lugares": "calles sin lugares",
-    "10-origen-de-la-asignacion": "origen de la asignación",
-    "11-reclamos-de-ruido-por-local": "reclamos de ruido por local",
+    "06-ruta-entre-dos-calles": "ruta entre dos calles",
+    "07-que-hay-a-pocas-cuadras": "qué hay a pocas cuadras",
+    "08-vida-nocturna-que-osm-no-tiene": "vida nocturna que OSM no tiene",
+    "09-ruido-en-calles-sin-comercio": "ruido en calles sin comercio",
+    "10-ruido-lejos-de-la-vida-nocturna": "ruido lejos de la vida nocturna",
+    "11-camino-al-local-mas-cercano": "camino al local más cercano",
     "12-vida-nocturna-de-foursquare": "vida nocturna de Foursquare",
+    "13-botilleria-mas-cercana": "botillería más cercana",
 }
 
 

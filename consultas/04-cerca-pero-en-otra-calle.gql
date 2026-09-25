@@ -1,0 +1,12 @@
+-- Reclamos por ruido a menos de 50 metros de un lugar que está en otra calle.
+-- Es lo que el patrón por calle no ve: CERCA_DE es proximidad geométrica y
+-- EN_CALLE es pertenencia, y un reclamo en una esquina o en la calle de atrás
+-- queda cerca de un lugar sin compartir su calle. `c <> d` compara nodos, así
+-- que un tramo homónimo de otra calle cuenta como calle distinta.
+MATCH (r:Reclamo)-[e:CERCA_DE]->(l:Lugar)-[:EN_CALLE]->(d:Calle),
+      (r)-[:EN_CALLE]->(c:Calle)
+WHERE r.categoria = 'Ruido' AND c <> d
+RETURN r.reporte_id AS reclamo, c.nombre AS calle_del_reclamo, l.etiqueta AS lugar,
+       d.nombre AS calle_del_lugar, e.distancia_m AS distancia_m
+ORDER BY distancia_m
+LIMIT 20
