@@ -438,13 +438,34 @@ def _componente_mayor(nodos_red: gpd.GeoDataFrame, tramos: pd.DataFrame) -> gpd.
     return nodos_red[(etiquetas == mayor) & usadas]
 
 
+def _esquinas_utiles(nodos_red: gpd.GeoDataFrame, segmentos: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Las intersecciones de la componente peatonal mayor.
+
+    La más cercana a un punto no siempre sirve para caminar: el Hospital San
+    José tiene a 59 metros una intersección que pertenece a un acceso interior
+    de dos nodos y 28 metros, sin conexión con el resto de la red. Anclado ahí,
+    el hospital queda incomunicado y cualquier consulta que camine desde él
+    devuelve cero filas. Anclar a la componente mayor cuesta unos metros de
+    distancia y deja a todos los puntos en la misma red.
+    """
+    import networkx as nx
+
+    peatonales = segmentos[segmentos["permite_peaton"]]
+    red = nx.Graph()
+    red.add_edges_from(zip(peatonales["u"].tolist(), peatonales["v"].tolist()))
+    if red.number_of_nodes() == 0:
+        return nodos_red
+    mayor = max(nx.connected_components(red), key=len)
+    return nodos_red[nodos_red["nodo_id"].isin(mayor)]
+
+
 def _anclar_en_la_red(
     grafo: GrafoPropiedades,
     puntos: gpd.GeoDataFrame,
     identificadores: list[str],
-    nodos_red: gpd.GeoDataFrame,
+    esquinas: gpd.GeoDataFrame,
 ) -> int:
-    """Cuelga cada punto de la intersección más cercana de la red.
+    """Cuelga cada punto de la intersección más cercana que sirva para caminar.
 
     `EN_CALLE` deja el punto colgando del eje con nombre completo, que puede
     medir kilómetros: sirve para preguntar por la calle y no para preguntar por
@@ -452,12 +473,12 @@ def _anclar_en_la_red(
     caminar la red desde ahí y acotar el recorrido con `sum(e.largo_m)`, que es
     lo que la gente quiere decir cuando dice "a dos cuadras".
     """
-    if puntos.empty or nodos_red.empty:
+    if puntos.empty or esquinas.empty:
         return 0
     coords_punto = shapely.get_coordinates(puntos.geometry.to_crs(config.CRS_METRICO).values)
-    coords_nodo = shapely.get_coordinates(nodos_red.geometry.to_crs(config.CRS_METRICO).values)
+    coords_nodo = shapely.get_coordinates(esquinas.geometry.to_crs(config.CRS_METRICO).values)
     distancias, indices = cKDTree(coords_nodo).query(coords_punto)
-    ids_nodo = nodos_red["nodo_id"].to_numpy()
+    ids_nodo = esquinas["nodo_id"].to_numpy()
     for i, (indice, distancia) in enumerate(zip(indices.tolist(), distancias.tolist())):
         grafo.agregar_arista(
             identificadores[i],
