@@ -1,7 +1,7 @@
 /* @ts-self-types="./frogql_wasm.d.ts" */
 
 /**
- * A live in-memory graph plus the caches that keep query latency flat.
+ * A live graph plus the caches that keep query latency flat.
  */
 export class Connection {
     static __wrap(ptr) {
@@ -19,6 +19,44 @@ export class Connection {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_connection_free(ptr, 0);
+    }
+    /**
+     * `{ node_labels, edge_labels, node_count, edge_count }`, mirroring
+     * the Python/Node `schema()` summary.
+     * What the typechecker knows about a query, without running it.
+     *
+     * This is the half of froGQL a REPL shows and a bare "0 rows" hides.
+     * `(n:Calle)-[e]->(m)` against a schema where every `EN_CALLE` points
+     * *into* `Calle` is not an empty answer, it is a **provably** empty
+     * one — the checker settles it before the runtime is asked, and
+     * saying "0 filas" instead sends the reader looking for missing data
+     * that was never missing.
+     *
+     * ```json
+     * { "ok": true, "empty": true, "errors": [], "warnings": [...],
+     *   "vars": [{ "name": "n", "type": "(:Calle {...})" }] }
+     * ```
+     *
+     * The pipeline is run here rather than through
+     * `compile_query_with_diagnostics_with` because that returns the
+     * compiled query and drops the `TypeEnvironment` — and the
+     * environment is the interesting part: it is what the checker
+     * *inferred*, per variable, which no amount of reading the query
+     * back tells you.
+     *
+     * Cheap enough to run on every keystroke: parse, elaborate and check,
+     * with no optimizer pass and no graph access at all.
+     * @param {string} query
+     * @returns {any}
+     */
+    check(query) {
+        const ptr0 = passStringToWasm0(query, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.connection_check(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
     }
     /**
      * @returns {number}
@@ -46,6 +84,63 @@ export class Connection {
         return takeFromExternrefTable0(ret[0]);
     }
     /**
+     * The active GRAPH TYPE, rendered the way `SHOW GRAPH TYPE DEFAULT`
+     * renders it in the REPL: one line per node type and one per edge
+     * type, with the properties each carries.
+     *
+     * `schema()` answers "which labels exist", which is what a sidebar
+     * needs and all it needs. This answers "what is in them" — the
+     * question anyone writing a query against an unfamiliar database
+     * actually has, and the one that was unanswerable in the browser
+     * because the formatter was never exposed.
+     *
+     * On a `.gdb` this reads the catalog; on a JSON graph it is inferred
+     * from the data, which is the same split `active_schema` makes.
+     * @returns {string}
+     */
+    graph_type() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.connection_graph_type(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * The active GRAPH TYPE as data, so it can be **drawn**.
+     *
+     * `graph_type()` renders the same thing as text, which is what the
+     * REPL shows and what a reader skims. A schema is a graph, though —
+     * node types joined by edge types — and the shape of it is the part
+     * a text listing makes you reconstruct in your head. This returns
+     * the pieces a diagram needs and lets the page draw them.
+     *
+     * ```json
+     * { "nodes": [{ "name": "fpl", "labels": ["Fpl"],
+     *               "props": [{ "key": "fplId", "type": "STRING" }] }],
+     *   "edges": [{ "label": "SALE_DE", "from": "fpl", "to": "aerodromo",
+     *               "directed": true, "props": [] }] }
+     * ```
+     *
+     * Endpoints are the *names* `typing::format::NodeTypeNames` derives,
+     * so the diagram and the text call a type the same thing. An edge
+     * whose endpoint matches no declared node type gets `null` there
+     * rather than a name that would misdescribe it — the same care
+     * `format_schema` takes when it declines to borrow a name.
+     * @returns {any}
+     */
+    graph_type_json() {
+        const ret = wasm.connection_graph_type_json(this.__wbg_ptr);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
      * @returns {number}
      */
     get node_count() {
@@ -53,8 +148,6 @@ export class Connection {
         return ret >>> 0;
     }
     /**
-     * `{ node_labels, edge_labels, node_count, edge_count }`, mirroring
-     * the Python/Node `schema()` summary.
      * @returns {any}
      */
     schema() {
@@ -84,6 +177,46 @@ export class Connection {
     }
 }
 if (Symbol.dispose) Connection.prototype[Symbol.dispose] = Connection.prototype.free;
+
+/**
+ * Open a `.gdb` image fetched over the network, with its `.ltj` sidecar
+ * when the caller has it.
+ *
+ * ```js
+ * const [gdb, ltj] = await Promise.all([
+ *   fetch("/santiago.gdb").then(r => r.arrayBuffer()),
+ *   fetch("/santiago.gdb.ltj").then(r => r.arrayBuffer()),
+ * ]);
+ * const conn = open_bytes(new Uint8Array(gdb), new Uint8Array(ltj));
+ * ```
+ *
+ * `ltj` is optional and is the reason to prefer this over `open_json`
+ * for anything large: without it the six LTJ trie orderings are rebuilt
+ * at open, which is `O(E log E)`. A sidecar that does not describe this
+ * database is **refused, not trusted** — the same `(graph_id,
+ * node_count, edge_count)` fingerprint a file-backed open checks — and
+ * the index is rebuilt instead, so a mismatched pair costs time and
+ * never correctness.
+ *
+ * The connection is read-mostly: DML works, through the same overlay as
+ * every other backend, but there is nowhere to write pages back to, so
+ * the durable copy is whatever the server serves. `to_json()` still
+ * gives a snapshot of the merged view.
+ * @param {Uint8Array} gdb
+ * @param {Uint8Array | null} [ltj]
+ * @returns {Connection}
+ */
+export function open_bytes(gdb, ltj) {
+    const ptr0 = passArray8ToWasm0(gdb, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    var ptr1 = isLikeNone(ltj) ? 0 : passArray8ToWasm0(ltj, wasm.__wbindgen_malloc);
+    var len1 = WASM_VECTOR_LEN;
+    const ret = wasm.open_bytes(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return Connection.__wrap(ret[0]);
+}
 
 /**
  * Parse a JSON graph document (`{"nodes": [...], "edges": [...]}`) and
@@ -232,6 +365,13 @@ function getUint8ArrayMemory0() {
 
 function isLikeNone(x) {
     return x === undefined || x === null;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {

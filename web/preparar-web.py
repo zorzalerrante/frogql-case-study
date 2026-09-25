@@ -35,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from redosm import config  # noqa: E402
 
-VERSION_WASM = "0.5.4"
+VERSION_WASM = "0.5.9"
 URL_WASM = f"https://registry.npmjs.org/frogql-wasm/-/frogql-wasm-{VERSION_WASM}.tgz"
 ARCHIVOS_WASM = ("frogql_wasm.js", "frogql_wasm_bg.wasm")
 
