@@ -190,7 +190,7 @@ misma fuente y el mismo criterio.
 
 ## El modelo de grafo
 
-Seis tipos de nodo y siete de arista.
+Seis tipos de nodo y ocho de arista.
 
 ```
 (:Interseccion) -[:CONECTA_AUTO]->  (:Interseccion)
@@ -202,6 +202,9 @@ Seis tipos de nodo y siete de arista.
 (:Venue)        -[:EN_CALLE]->      (:Calle)
 (:Calle)        ~[:CRUZA_CON]~      (:Calle)
 (:Reclamo)      -[:CERCA_DE]->      (:Lugar)
+(:Lugar)        -[:EN_ESQUINA]->    (:Interseccion)
+(:Reclamo)      -[:EN_ESQUINA]->    (:Interseccion)
+(:Venue)        -[:EN_ESQUINA]->    (:Interseccion)
 (:Lugar)        -[:EN_ZONA]->       (:ZonaCensal)
 (:Reclamo)      -[:EN_ZONA]->       (:ZonaCensal)
 (:Venue)        -[:EN_ZONA]->       (:ZonaCensal)
@@ -221,6 +224,7 @@ Seis tipos de nodo y siete de arista.
 | `EN_CALLE` | 3961 | 408 501 | dirigida | `Interseccion`, `Lugar`, `Reclamo`, `Venue` | `Calle` |
 | `CERCA_DE` | 253 | 40 057 | dirigida | `Reclamo` | `Lugar` (a menos de 50 m) |
 | `EN_ZONA` | 1722 | 130 320 | dirigida | `Lugar`, `Reclamo`, `Venue` | `ZonaCensal` |
+| `EN_ESQUINA` | 1723 | — | dirigida | `Lugar`, `Reclamo`, `Venue` | `Interseccion` más cercana |
 | `CONECTA_AUTO` | 3527 | 420 994 | dirigida | `Interseccion` | `Interseccion` |
 | `CONECTA_PEATON` | 2931 | 342 921 | no dirigida | `Interseccion` | `Interseccion` |
 | `CONECTA_BICI` | 2400 | 257 392 | no dirigida | `Interseccion` | `Interseccion` |

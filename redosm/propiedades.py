@@ -10,6 +10,7 @@ atributos. Acá conviven seis tipos de nodo y siete tipos de arista:
     (:Venue)        -[:EN_CALLE]-> (:Calle)
     (:Calle)        ~[:CRUZA_CON]~ (:Calle)
     (:Reclamo)      -[:CERCA_DE]-> (:Lugar)
+    (:Lugar|:Reclamo|:Venue) -[:EN_ESQUINA]-> (:Interseccion)
     (:Lugar|:Reclamo|:Venue) -[:EN_ZONA]-> (:ZonaCensal)
 
 La calle con nombre se reifica como nodo. El tramo entre dos esquinas es una
@@ -365,6 +366,14 @@ def construir(
         )
         avisar(f"Venue: {len(ids_venue)}")
 
+    # --- Anclaje de cada punto en la red ------------------------------
+    antes = len(grafo.aristas)
+    _anclar_en_la_red(grafo, lugares, ids_lugar, nodos_red)
+    _anclar_en_la_red(grafo, reclamos, ids_reclamo, nodos_red)
+    if venues is not None and not venues.empty:
+        _anclar_en_la_red(grafo, venues, ids_venue, nodos_red)
+    avisar(f"EN_ESQUINA: {len(grafo.aristas) - antes}")
+
     # --- Proximidad entre reclamos y lugares --------------------------
     antes = len(grafo.aristas)
     for i, j, distancia in _pares_cercanos(reclamos, lugares, distancia_cercania_m):
@@ -397,6 +406,36 @@ def _categoria_lugar(fila: dict) -> str:
         if valor:
             return f"{llave}={valor}"
     return "sin_categoria"
+
+
+def _anclar_en_la_red(
+    grafo: GrafoPropiedades,
+    puntos: gpd.GeoDataFrame,
+    identificadores: list[str],
+    nodos_red: gpd.GeoDataFrame,
+) -> int:
+    """Cuelga cada punto de la intersección más cercana de la red.
+
+    `EN_CALLE` deja el punto colgando del eje con nombre completo, que puede
+    medir kilómetros: sirve para preguntar por la calle y no para preguntar por
+    la cercanía. Con el punto anclado a una intersección, una consulta puede
+    caminar la red desde ahí y acotar el recorrido con `sum(e.largo_m)`, que es
+    lo que la gente quiere decir cuando dice "a dos cuadras".
+    """
+    if puntos.empty or nodos_red.empty:
+        return 0
+    coords_punto = shapely.get_coordinates(puntos.geometry.to_crs(config.CRS_METRICO).values)
+    coords_nodo = shapely.get_coordinates(nodos_red.geometry.to_crs(config.CRS_METRICO).values)
+    distancias, indices = cKDTree(coords_nodo).query(coords_punto)
+    ids_nodo = nodos_red["nodo_id"].to_numpy()
+    for i, (indice, distancia) in enumerate(zip(indices.tolist(), distancias.tolist())):
+        grafo.agregar_arista(
+            identificadores[i],
+            f"nodo:{int(ids_nodo[indice])}",
+            "EN_ESQUINA",
+            {"distancia_m": round(float(distancia), 1)},
+        )
+    return len(identificadores)
 
 
 def _pares_cercanos(

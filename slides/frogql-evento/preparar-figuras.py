@@ -206,42 +206,106 @@ def mapas_del_reclamo(conexion: frogql.Connection, red: gpd.GeoDataFrame) -> Non
 
 
 # %% [markdown]
-# ## Una y dos cuadras
+# ## Cuánto hay que caminar
 #
-# Las calles que cruzan a la Avenida Independencia y las que cruzan a esas,
-# con los locales de la consulta de caminos.
+# `CRUZA_CON` une ejes con nombre completos, así que un salto puede medir
+# kilómetros y a dos saltos se pinta casi toda la comuna. La pregunta por
+# cercanía se responde caminando la red de esquinas y sumando el largo de los
+# tramos, que es lo que hace la consulta de la lámina con `sum(e.largo_m)`.
+#
+# El alcance se calcula acá con un Dijkstra sobre los mismos datos, para
+# dibujarlo: la consulta del deck devuelve los locales, no el área.
 
 # %%
-def mapa_de_caminos(conexion: frogql.Connection, red: gpd.GeoDataFrame) -> None:
-    propia = ids(conexion, f"MATCH (c:Calle) WHERE c.nombre = '{CALLE}' RETURN c.calle_id AS id")
-    una = ids(
-        conexion,
-        f"MATCH (c:Calle)~[:CRUZA_CON]~(o:Calle) WHERE c.nombre = '{CALLE}' RETURN o.calle_id AS id",
-    ) - propia
-    hasta_dos = ids(
-        conexion,
-        f"MATCH (c:Calle)~[:CRUZA_CON]~{{1,2}}(o:Calle) WHERE c.nombre = '{CALLE}' RETURN o.calle_id AS id",
-    )
-    dos = hasta_dos - una - propia
-    lista = ", ".join(f"'{c}'" for c in LOCALES_CON_ALCOHOL)
-    locales = conexion.execute(
-        f"MATCH (mi:Calle)~[:CRUZA_CON]~{{1,2}}(otra:Calle)<-[:EN_CALLE]-(l:Lugar) "
-        f"WHERE mi.nombre = '{CALLE}' AND l.categoria IN [{lista}] "
-        "RETURN DISTINCT l.etiqueta AS local, otra.nombre AS calle, l.lon AS x, l.lat AS y",
-        limit=0,
-    )
-    print(f"  caminos: {len(una)} calles a una cuadra, {len(dos)} a dos, {len(locales)} filas")
+def caminata(conexion: frogql.Connection, metros: float) -> tuple[dict, dict]:
+    """Distancia caminando desde el reclamo a cada esquina, y sus tramos."""
+    import heapq
+    from collections import defaultdict
 
-    figura, eje = lienzo(red)
-    red[red["calle"].isin(dos)].plot(ax=eje, color=MAGENTA, alpha=0.35, linewidth=1.3, zorder=2)
-    red[red["calle"].isin(una)].plot(ax=eje, color=MAGENTA, linewidth=1.6, zorder=3)
-    red[red["calle"].isin(propia)].plot(ax=eje, color=NAVY, linewidth=2.8, zorder=4)
-    eje.scatter([l["x"] for l in locales], [l["y"] for l in locales], s=55, color=NAVY, edgecolor="white", linewidth=1, zorder=5)
-    eje.plot([], [], color=NAVY, linewidth=2.8, label=CALLE)
-    eje.plot([], [], color=MAGENTA, linewidth=1.6, label="A una cuadra")
-    eje.plot([], [], color=MAGENTA, alpha=0.35, linewidth=1.3, label="A dos cuadras")
-    eje.scatter([], [], s=55, color=NAVY, edgecolor="white", label="Bar o botillería")
-    eje.legend(loc="lower right", frameon=False, fontsize=9, bbox_to_anchor=(0.0, 0.0))
+    vecinos = defaultdict(list)
+    for f in conexion.execute(
+        "MATCH (a:Interseccion)-[e:CONECTA_PEATON]-(b:Interseccion) "
+        "RETURN a.lon AS ax, a.lat AS ay, b.lon AS bx, b.lat AS by, e.largo_m AS m",
+        limit=0,
+    ):
+        vecinos[(f["ax"], f["ay"])].append(((f["bx"], f["by"]), f["m"] or 0.0))
+
+    ancla = conexion.execute(
+        "MATCH (r:Reclamo)-[:EN_ESQUINA]->(i:Interseccion) "
+        f"WHERE r.reporte_id = '{RECLAMO}' RETURN i.lon AS x, i.lat AS y",
+        limit=0,
+    )[0]
+    origen = (ancla["x"], ancla["y"])
+
+    distancia = {origen: 0.0}
+    cola = [(0.0, origen)]
+    while cola:
+        d, nodo = heapq.heappop(cola)
+        if d > distancia.get(nodo, float("inf")):
+            continue
+        for vecino, largo in vecinos[nodo]:
+            nueva = d + largo
+            if nueva < distancia.get(vecino, float("inf")) and nueva <= metros:
+                distancia[vecino] = nueva
+                heapq.heappush(cola, (nueva, vecino))
+    return distancia, vecinos
+
+
+def mapa_de_distancia(conexion: frogql.Connection, red: gpd.GeoDataFrame) -> None:
+    ALCANCE, CERCA = 600.0, 200.0
+    distancia, _ = caminata(conexion, ALCANCE)
+
+    reclamo = conexion.execute(
+        f"MATCH (r:Reclamo) WHERE r.reporte_id = '{RECLAMO}' RETURN r.lon AS x, r.lat AS y",
+        limit=0,
+    )[0]
+
+    lista = ", ".join(f"'{c}'" for c in LOCALES_CON_ALCOHOL)
+    locales = []
+    for f in conexion.execute(
+        f"MATCH (l:Lugar)-[:EN_ESQUINA]->(i:Interseccion) WHERE l.categoria IN [{lista}] "
+        "RETURN l.etiqueta AS etiqueta, l.lon AS x, l.lat AS y, i.lon AS ix, i.lat AS iy",
+        limit=0,
+    ):
+        metros = distancia.get((f["ix"], f["iy"]))
+        if metros is not None:
+            locales.append((metros, f))
+    locales.sort(key=lambda par: par[0])
+    print(f"  caminando: {len(distancia)} esquinas a {ALCANCE:.0f} m, "
+          f"{len(locales)} locales con alcohol en ese alcance")
+    for metros, f in locales[:3]:
+        print(f"    {metros:5.0f} m  {f['etiqueta']}")
+
+    # Un tramo entra al dibujo cuando sus dos extremos están dentro del alcance.
+    def hasta(tope: float):
+        return [
+            i for i, linea in enumerate(red.geometry)
+            if all(distancia.get(c, float("inf")) <= tope for c in linea.coords)
+        ]
+
+    # El área caminable es una fracción de la comuna, así que el mapa se acerca
+    # a ella: dibujada entera, la respuesta queda del tamaño de una moneda.
+    alcanzados = red.iloc[hasta(ALCANCE)]
+    figura, eje = figure_from_geodataframe(alcanzados, height=4.6)
+    red.plot(ax=eje, color=GRIS, linewidth=0.6, zorder=1)
+    alcanzados.plot(ax=eje, color=MAGENTA, alpha=0.4, linewidth=1.6, zorder=2)
+    red.iloc[hasta(CERCA)].plot(ax=eje, color=MAGENTA, linewidth=2.2, zorder=3)
+    eje.scatter([reclamo["x"]], [reclamo["y"]], s=90, color=NAVY, edgecolor="white",
+                linewidth=1.5, zorder=6)
+    for metros, f in locales[:1]:
+        eje.scatter([f["x"]], [f["y"]], s=70, color=NAVY, edgecolor="white", linewidth=1, zorder=5)
+        nombre = f["etiqueta"] if not f["etiqueta"].startswith("(") else "botillería sin nombre"
+        rotular(eje, f["x"], f["y"], f"{nombre}, a {metros:.0f} m caminando", -26, 22)
+    rotular(eje, reclamo["x"], reclamo["y"], "el reclamo", 26, -20)
+
+    izq, abajo, der, arriba = alcanzados.total_bounds
+    margen = max(der - izq, arriba - abajo) * 0.12
+    eje.set_xlim(izq - margen, der + margen)
+    eje.set_ylim(abajo - margen, arriba + margen)
+
+    eje.plot([], [], color=MAGENTA, linewidth=2.2, label=f"A {CERCA:.0f} m caminando")
+    eje.plot([], [], color=MAGENTA, alpha=0.4, linewidth=1.6, label=f"A {ALCANCE:.0f} m caminando")
+    eje.legend(loc="lower left", frameon=False, fontsize=9)
     guardar(figura, "caminos.png")
 
 
@@ -259,4 +323,4 @@ if __name__ == "__main__":
         red = tramos(conexion)
         print(f"  {len(red)} tramos dibujados")
         mapas_del_reclamo(conexion, red)
-        mapa_de_caminos(conexion, red)
+        mapa_de_distancia(conexion, red)

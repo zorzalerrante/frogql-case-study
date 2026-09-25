@@ -5,3 +5,4 @@ datos/
 salida/
 *.gdb
 .ruff_cache/
+.DS_Store

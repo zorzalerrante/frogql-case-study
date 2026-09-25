@@ -88,7 +88,7 @@ y exporta a `salida/<área>/`.
 - `contexto.py`: capas no viales (SOSAFE, zonas censales, venues de
   Foursquare). Sin las zonas censales el grafo se arma igual, sin nodos
   `ZonaCensal`, y la consulta `08` queda vacía.
-- `propiedades.py`: arma el grafo de propiedades (seis tipos de nodo, siete de
+- `propiedades.py`: arma el grafo de propiedades (seis tipos de nodo, ocho de
   arista).
 - `exportar.py`: serializa a GraphML, JSON de froGQL y paquete CSV.
 
@@ -101,12 +101,21 @@ y exporta a `salida/<área>/`.
 (:Calle)        ~[:CRUZA_CON]~      (:Calle)
 (:Reclamo)      -[:CERCA_DE]->      (:Lugar)
 (:Lugar|:Reclamo|:Venue) -[:EN_ZONA]-> (:ZonaCensal)
+(:Lugar|:Reclamo|:Venue) -[:EN_ESQUINA]-> (:Interseccion)
 ```
 
 La decisión central del modelo: la calle con nombre se reifica como nodo. Con
 la calle como nodo, "los lugares en la misma calle que este reclamo" es un
 patrón de dos aristas y no un cálculo geométrico. Cualquier cambio que
 convierta la calle en atributo rompe el argumento del caso de estudio.
+
+`EN_CALLE` deja cada punto colgando del eje con nombre completo, que puede
+medir kilómetros, así que sirve para preguntar por la calle y no por la
+cercanía. `EN_ESQUINA` lo ancla además a la intersección más cercana, y desde
+ahí una consulta camina la red y acota el recorrido con `sum(e.largo_m)`, que
+es lo que la gente quiere decir con "a dos cuadras". Un salto de `CRUZA_CON` no
+sirve para eso: une ejes enteros, y en Independencia uno de esos ejes mide tres
+kilómetros.
 
 La identidad de una calle combina el tag `name` con la conectividad: los tramos
 homónimos se agrupan por componente conexa y después se vuelven a unir los ejes

@@ -198,41 +198,29 @@ En la versión de una columna, la consulta también se edita y se corre en vivo,
 
 ![La consulta de locales con alcohol en calles con reclamos por ruido, sin los restaurantes. Las calles y los locales del resultado quedan encendidos sobre la red de la comuna.](img/escritorio-03.png){width="96%"}
 
-## Un patrón de largo variable recorre una o dos cuadras
+## Un patrón de largo variable mide cuánto hay que caminar
 
-> Con tanto ruido me dio sed... ¿qué botillerías y bares hay a una o dos cuadras?
+> Con tanto ruido me dio sed... ¿dónde está la botillería más cercana?
 
 ::: columns
-:::: {.column width="55%"}
+:::: {.column width="58%"}
 ```
-MATCH (mi:Calle)
-  ~[:CRUZA_CON]~{1,2}
-  (otra:Calle)<-[:EN_CALLE]-(l:Lugar)
-WHERE mi.nombre =
-      'Avenida Independencia'
+MATCH ANY SHORTEST
+  (r:Reclamo)-[:EN_ESQUINA]->(i)
+  ~[e:CONECTA_PEATON]~+
+  (j)<-[:EN_ESQUINA]-(l:Lugar)
+WHERE r.reporte_id = '000000'
   AND l.categoria IN
       ['amenity=bar', 'shop=alcohol']
-RETURN DISTINCT l.etiqueta AS local,
-       otra.nombre AS calle
+  AND sum(e.largo_m) < 600
+RETURN l.etiqueta, sum(e.largo_m) AS m
+ORDER BY m
 ```
 ::::
-:::: {.column width="45%"}
-```{.dot width="92%"}
-digraph C {
-  bgcolor="transparent";
-  node [fontname="Urbanist", shape=box, style="rounded,filled", fillcolor="white", color="#0A0E50", fontcolor="#0A0E50", penwidth=1.5, fontsize=20, margin="0.18,0.08"];
-  edge [fontname="Urbanist", color="#0A0E50", fontcolor="#0A0E50", fontsize=16];
-  rankdir=TB; nodesep=0.3; ranksep=0.45;
-  a [label="Avenida Independencia", fillcolor="#0A0E50", fontcolor="white"];
-  g [label="Gamero", fillcolor="#0A0E50", fontcolor="white"];
-  p [label="El Pino", fillcolor="#0A0E50", fontcolor="white"];
-  e [label="Botillería\nLas Enredaderas", fillcolor="#CF3889", fontcolor="white", color="#CF3889"];
-  a -> g [label=" cruza con", dir=none];
-  g -> p [label=" cruza con", dir=none];
-  e -> p [label=" EN_CALLE"];
-  {rank=same; p; e;}
-}
-```
+:::: {.column width="42%"}
+`~+` camina las esquinas que haga falta y `sum(e.largo_m)` suma los metros.
+
+Son 491 metros: ninguno de los 20 bares y botillerías de la comuna está más cerca.
 
 En SQL, este recorrido requiere una consulta recursiva.
 ::::
@@ -240,7 +228,7 @@ En SQL, este recorrido requiere una consulta recursiva.
 
 ## {.image}
 
-![froGQL encontró 18 locales en 33 milisegundos. Las calles a una y dos cuadras de la Avenida Independencia cubren casi toda la comuna.](img/caminos.png){height="11cm"}
+![Caminando desde el reclamo, la botillería más cercana queda a 491 metros. Un salto entre calles con nombre no sirve para medir cercanía: la Avenida Independencia cruza con 58 calles y algunas miden tres kilómetros.](img/caminos.png){width="82%"}
 
 ## froGQL sirve cuando los datos caben en el dispositivo de quien consulta
 
