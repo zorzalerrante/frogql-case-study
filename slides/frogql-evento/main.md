@@ -141,8 +141,8 @@ digraph T {
 
 Sin red, el mapa de fondo no carga, pero las consultas siguen respondiendo.
 ::::
-:::: {.column width="44%"}
-![](img/movil-01.png){height="9.6cm"}
+:::: {.column width="44%" .center}
+![](img/movil-01.png){height="12cm"}
 ::::
 :::
 
