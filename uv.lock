@@ -983,15 +983,15 @@ wheels = [
 
 [[package]]
 name = "frogql"
-version = "0.5.9"
+version = "0.5.10"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ca/55/4c32bfebd513240ffc55dca53837024de20ba8d6ddbd9d8ce58e302dee48/frogql-0.5.9.tar.gz", hash = "sha256:4390552587739d3a539079784889a12442b6bab1ff177cabe094db6801e9e4a2", size = 1182554, upload-time = "2026-09-25T13:09:48.077Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/88/d7378caf80a9b615cd07af15c990a49186cbd8fe6ac929d7fe5c5f349ede/frogql-0.5.10.tar.gz", hash = "sha256:cea3517ece61dec8c916f14072827d0a2f001a856937398fe20fd79f475db17b", size = 1183942, upload-time = "2026-09-25T21:29:32.681Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/6b/3bce034f79822b475fb29608f48e782d608870673daa35881cd79abaf39b/frogql-0.5.9-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:73502cf9c1093fe7d417fcab55ac6cde80fa96b7ba033d6af471602d9758c32e", size = 1434681, upload-time = "2026-09-25T13:09:39.295Z" },
-    { url = "https://files.pythonhosted.org/packages/fb/32/01965ead5a9cc94476f7e0632302244a09948a5a64419192a941ebd1efca/frogql-0.5.9-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:ea7d298dd4ff087b2c80e7fc37d94bed60b3dfa3f42336e999f2abcd29abcaf4", size = 1358140, upload-time = "2026-09-25T13:09:41.034Z" },
-    { url = "https://files.pythonhosted.org/packages/21/a9/27fb18e00c587c3e2dbbf70b19e8e9b4fd7f6f74efdcdfee4e44d7892b9c/frogql-0.5.9-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9993bdc48502c78d836037ad65c3507e3b5f2ea8e9b658097c129ab15ed0bb6f", size = 1470893, upload-time = "2026-09-25T13:09:42.494Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/12/632bef697b277ccef89bd1decd0e212194777d97db8358022715d85e1725/frogql-0.5.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1f9a125fb36eb139ecf057dc2b46b0f5774d86126325f2d61a7e303702993235", size = 1548386, upload-time = "2026-09-25T13:09:44.596Z" },
-    { url = "https://files.pythonhosted.org/packages/57/b2/fb23a89567532b63ed745468ef62fae29d7b059438d3f76f6a355de69978/frogql-0.5.9-cp38-abi3-win_amd64.whl", hash = "sha256:ce02f97d93a2b0e6867972a09b50cb0e6e47ac17e039277f9e02d551d649bc47", size = 1373365, upload-time = "2026-09-25T13:09:46.452Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/bc/0d6841906497cda6521f5bf66a4e92e0272ee8174ba955b9771f8c98d7a8/frogql-0.5.10-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:f54b358131154fba14aa8ecd086d317de268b5deda398a0b3fd6a9f4aaafdaa1", size = 1435862, upload-time = "2026-09-25T21:29:26.107Z" },
+    { url = "https://files.pythonhosted.org/packages/55/f2/abbff05a2ad16ebb4d436f29beafaaedf137af5569a480fd909079d15666/frogql-0.5.10-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:98875a6ffe946fb24d76491ca234b1321a100f564098cd59432ca66000ee5854", size = 1360755, upload-time = "2026-09-25T21:29:27.375Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/85/1d6bb1b3a641bdd2057de0702382044eeda48fc907c673e9ccaaa3380dca/frogql-0.5.10-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:71898bfa678e22f95c4c8c535015d3c1b507fb2a95294c29f958022045cca1c2", size = 1470714, upload-time = "2026-09-25T21:29:28.538Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/b0/929024528978db92704ceb670ddaad3f9fdeaac071511fadc378c0aa8da8/frogql-0.5.10-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:902cb57b5b6ba96fcfa9a1eed243f108af15c57ab694882fb65736e25fa7ceaf", size = 1548579, upload-time = "2026-09-25T21:29:29.854Z" },
+    { url = "https://files.pythonhosted.org/packages/89/ca/62a8b278abdc0cb960419a6da8b61f7423b60f5c6c6166bb60915c972999/frogql-0.5.10-cp38-abi3-win_amd64.whl", hash = "sha256:3e5d702888c99ca03008e466be843fd12817efedfd3499042286f8e435261321", size = 1372716, upload-time = "2026-09-25T21:29:31.554Z" },
 ]
 
 [[package]]
@@ -1014,7 +1014,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "chiricoca", git = "https://github.com/PLUMAS-research/chiricoca.git" },
-    { name = "frogql", specifier = ">=0.5.9" },
+    { name = "frogql", specifier = ">=0.5.10" },
     { name = "geopandas", specifier = ">=1.0" },
     { name = "ipykernel", specifier = ">=6.29" },
     { name = "networkx", specifier = ">=3.3" },

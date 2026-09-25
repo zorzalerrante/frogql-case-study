@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "chiricoca",
-    "frogql>=0.5.9",
+    "frogql>=0.5.10",
     "geopandas>=1.0",
     "ipykernel>=6.29",
     "networkx>=3.3",
