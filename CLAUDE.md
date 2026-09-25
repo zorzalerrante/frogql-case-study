@@ -62,7 +62,7 @@ hay que borrar los parquet de `datos/<área>/osm/`. Su cuerpo vive bajo
 redes por modo, cuelga las capas de contexto, construye el grafo de propiedades
 y exporta a `salida/<área>/`.
 
-`03-consultas.py` importa el JSON en froGQL, corre los doce archivos de
+`03-consultas.py` importa el JSON en froGQL, corre los archivos de
 `consultas/` y mide cada uno.
 
 ### El paquete `redosm/`
@@ -142,7 +142,7 @@ falla en la ciudad.
 
 ## Consultas
 
-Los doce archivos de `consultas/` son autocontenidos y se pegan tal cual en el
+Los archivos de `consultas/` son autocontenidos y se pegan tal cual en el
 REPL. Estilo: `GROUP BY` después del `RETURN`, agrupación por la variable
 cuando importa la identidad del nodo, `LIMIT` como cláusula. El encabezado de
 comentarios `--` explica qué responde la consulta y por qué el patrón está
@@ -155,7 +155,7 @@ calle, porque los identificadores son correlativos por área.
 ## Visualizador web
 
 `web/` es una página estática que carga el grafo de Independencia en froGQL
-compilado a WebAssembly y corre los doce `.gql` en el navegador. No tiene
+compilado a WebAssembly y corre los `.gql` en el navegador. No tiene
 build: `web/preparar-web.py` baja el motor de npm, copia el JSON que exporta
 `02-caso-estudio.py` y junta las consultas en un archivo.
 

@@ -1,7 +1,7 @@
 // Parámetros de una consulta: las constantes que se pueden cambiar sin editar
 // el texto.
 //
-// Los doce archivos escriben sus constantes de dos formas, `v.prop = 'x'` y
+// Los archivos de `consultas/` escriben sus constantes de dos formas, `v.prop = 'x'` y
 // `v.prop IN ['x', 'y']`, y declaran la etiqueta de cada variable en el
 // patrón. Con eso cada constante se vuelve un parámetro con etiqueta y
 // propiedad, y sus valores posibles salen del grafo. El `LIMIT` también es un

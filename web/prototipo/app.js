@@ -1,5 +1,5 @@
 // Prototipo de aplicación sobre el grafo de Independencia: el mismo motor, el
-// mismo grafo y las mismas doce consultas que la página de `web/`, sobre un
+// mismo grafo y las mismas consultas que la página de `web/`, sobre un
 // mapa MapLibre con capas de deck.gl.
 //
 // Las constantes de cada consulta son parámetros: se cambian con controles o
@@ -874,7 +874,7 @@ async function arrancar() {
         el("p", {
           text:
             "Esta página carga en el navegador el grafo de propiedades de la comuna de Independencia " +
-            "y lo consulta con froGQL compilado a WebAssembly. Las doce consultas son los archivos " +
+            "y lo consulta con froGQL compilado a WebAssembly. Las consultas son los archivos " +
             "consultas/*.gql del repositorio, y cada resultado se enciende sobre la red vial.",
         }),
         el("div", { class: "rotulo", text: "El modelo" }),

@@ -1,0 +1,19 @@
+-- La botillería o el bar más cercano al reclamo, caminando.
+-- Las otras consultas preguntan por la calle, que es una relación guardada.
+-- Esta pregunta por distancia, que hay que recorrer: `~+` camina la red de
+-- esquinas hasta donde haga falta y `sum(e.largo_m)` suma los metros del
+-- camino, así que el resultado está en metros y no en saltos.
+-- EN_ESQUINA es lo que lo hace posible. EN_CALLE cuelga el punto del eje con
+-- nombre completo, que puede medir kilómetros; EN_ESQUINA lo ancla además a la
+-- intersección más cercana, que es donde empieza y termina la caminata.
+-- ANY SHORTEST se queda con un camino por par de extremos. Sin eso el motor
+-- enumera todos los caminos posibles entre las dos puntas, que son millones.
+MATCH ANY SHORTEST (r:Reclamo)-[:EN_ESQUINA]->(i:Interseccion)
+                   ~[e:CONECTA_PEATON]~+
+                   (j:Interseccion)<-[:EN_ESQUINA]-(l:Lugar)
+WHERE r.reporte_id = '000050'
+  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'shop=alcohol']
+  AND sum(e.largo_m) < 600
+RETURN l.etiqueta AS local, l.categoria AS categoria, sum(e.largo_m) AS metros
+ORDER BY metros
+LIMIT 10

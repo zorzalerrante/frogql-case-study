@@ -63,7 +63,7 @@ def guardar(pagina, nombre: str, elemento: str | None = None) -> None:
 
 
 def tiempos_de_la_pagina(navegador) -> None:
-    """Carga la página de una columna, corre las doce y lee sus tiempos."""
+    """Carga la página de una columna, corre todas y lee sus tiempos."""
     pagina = navegador.new_page(viewport={"width": 1000, "height": 900})
     pagina.goto(f"http://127.0.0.1:{PUERTO}/")
     pagina.wait_for_selector("#correr-todas:not([disabled])", timeout=60_000)

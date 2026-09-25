@@ -194,7 +194,7 @@ export function ubicarNodos(grafo, nodos) {
  * Encuentra las constantes de texto de una consulta junto con el nodo al que
  * pertenecen.
  *
- * Los doce archivos escriben sus constantes de dos formas, `v.prop = 'x'` y
+ * Los archivos de `consultas/` escriben sus constantes de dos formas, `v.prop = 'x'` y
  * `v.prop IN ['x', 'y']`, y declaran la etiqueta de cada variable en el
  * patrón. Eso alcanza para saber que `'000050'` es el `reporte_id` de un
  * `Reclamo`. El parser sirve para las consultas del repositorio y no pretende

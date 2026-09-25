@@ -105,7 +105,7 @@ siete gigabytes de memoria. Las mediciones son de una máquina con 20 núcleos y
 | `.gdb` construido por froGQL | 2.3 MB | 233.4 MB |
 | Importación del JSON | 0.2 s | 20.8 s |
 
-Los tiempos de las doce consultas en una corrida, con froGQL 0.5.1. Cada
+Los tiempos de las consultas en una corrida, con froGQL 0.5.1. Cada
 consulta se corre completa: el parámetro `limit` de `execute()` es un tope de
 ejecución y no de presentación, así que el motor deja de producir filas al
 alcanzarlo y el tiempo medido dejaría de corresponder a la consulta escrita. El
@@ -238,7 +238,7 @@ numeraciones de nodos distintas y esa comparación sería imposible.
 
 ## Las consultas
 
-Los doce archivos de `consultas/` son autocontenidos: se pegan tal cual en el
+Los archivos de `consultas/` son autocontenidos: se pegan tal cual en el
 REPL de froGQL o los corre `03-consultas.py`, que además mide cuánto tarda cada
 uno. Están escritas en el estilo que documenta `docs/frogql-for-agents.md` del
 repositorio de froGQL: `GROUP BY` después del `RETURN`, agrupación por la
@@ -259,6 +259,7 @@ de la consulta.
 | `10-origen-de-la-asignacion.gql` | Cómo se asignó cada lugar a su calle |
 | `11-reclamos-de-ruido-por-local.gql` | Cuántos reclamos por ruido tiene la calle de cada local |
 | `12-vida-nocturna-de-foursquare.gql` | Vida nocturna de Foursquare en calles con reclamos |
+| `13-botilleria-mas-cercana.gql` | La botillería o el bar más cercano al reclamo, caminando |
 
 Los archivos traen el identificador `'000050'` como plantilla. Los
 identificadores son correlativos por fecha dentro de cada área, así que el mismo

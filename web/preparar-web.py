@@ -11,8 +11,8 @@ reconstruya el grafo, se suba la versión del motor o se edite una consulta:
   solo acepta el JSON del grafo y no el `.gdb`.
 - `datos/independencia.json`: el grafo que exporta `02-caso-estudio.py`, tal
   cual. Es la misma entrada que consume `frogql.import_json` en Python.
-- `datos/consultas.json`: los doce `.gql` con su encabezado de comentarios,
-  en un solo archivo para que la página haga una descarga y no doce.
+- `datos/consultas.json`: los `.gql` con su encabezado de comentarios, en un
+  solo archivo para que la página haga una descarga y no una por consulta.
 
     uv run python web/preparar-web.py
 
@@ -86,7 +86,7 @@ def copiar_grafo() -> int:
 
 
 def juntar_consultas() -> int:
-    """Escribe los doce `.gql` en un solo JSON, con su encabezado aparte.
+    """Escribe los `.gql` en un solo JSON, con su encabezado aparte.
 
     El motor acepta los comentarios `--` dentro del texto, así que la consulta
     se manda tal cual. El encabezado se separa igual para mostrarlo como

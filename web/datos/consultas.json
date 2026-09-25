@@ -82,5 +82,12 @@
   "titulo": "Vida nocturna según Foursquare, en calles con reclamos por ruido",
   "explicacion": "OpenStreetMap casi no mapea bares en Chile: en Independencia tiene tres locales nocturnos en toda la comuna, y Overpass confirma que el dato no está en el mapa. La capa de Foursquare registra 26 en la misma comuna y 3264 en el Gran Santiago, así que para esta categoría es la fuente que sirve. El precio es que los venues no traen nombre y que los check-ins son de 2012, de modo que sitúan el fenómeno pero no identifican un local vigente.",
   "gql": "MATCH (v:Venue)-[:EN_CALLE]->(c:Calle)\nWHERE v.categoria IN ['Bar', 'Dive Bar', 'Pub', 'Nightclub', 'Brewery',\n                      'Beer Garden', 'Gay Bar', 'Gastropub', 'Rock Club',\n                      'Karaoke Bar', 'Lounge', 'Cocktail Bar', 'Sports Bar',\n                      'Wine Bar', 'Music Venue', 'Strip Club', 'Other Nightlife']\n  AND EXISTS { MATCH (r:Reclamo)-[:EN_CALLE]->(c) WHERE r.categoria = 'Ruido' }\nRETURN v.categoria AS categoria, v.checkins AS checkins,\n       c.nombre AS calle, c.comuna AS comuna\nORDER BY checkins DESC\nLIMIT 20"
+ },
+ {
+  "archivo": "13-botilleria-mas-cercana.gql",
+  "numero": "13",
+  "titulo": "La botillería o el bar más cercano al reclamo, caminando",
+  "explicacion": "Las otras consultas preguntan por la calle, que es una relación guardada. Esta pregunta por distancia, que hay que recorrer: `~+` camina la red de esquinas hasta donde haga falta y `sum(e.largo_m)` suma los metros del camino, así que el resultado está en metros y no en saltos. EN_ESQUINA es lo que lo hace posible. EN_CALLE cuelga el punto del eje con nombre completo, que puede medir kilómetros; EN_ESQUINA lo ancla además a la intersección más cercana, que es donde empieza y termina la caminata. ANY SHORTEST se queda con un camino por par de extremos. Sin eso el motor enumera todos los caminos posibles entre las dos puntas, que son millones.",
+  "gql": "MATCH ANY SHORTEST (r:Reclamo)-[:EN_ESQUINA]->(i:Interseccion)\n                   ~[e:CONECTA_PEATON]~+\n                   (j:Interseccion)<-[:EN_ESQUINA]-(l:Lugar)\nWHERE r.reporte_id = '000050'\n  AND l.categoria IN ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'shop=alcohol']\n  AND sum(e.largo_m) < 600\nRETURN l.etiqueta AS local, l.categoria AS categoria, sum(e.largo_m) AS metros\nORDER BY metros\nLIMIT 10"
  }
 ]

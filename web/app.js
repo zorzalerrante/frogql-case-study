@@ -1,5 +1,5 @@
 // Carga el grafo de Independencia en froGQL compilado a WebAssembly y corre
-// los doce .gql del repositorio.
+// los .gql del repositorio.
 //
 // El motor es un backend en RAM: no hay sistema de archivos en el navegador,
 // así que la entrada es el JSON que exporta `redosm/exportar.py` y no el
