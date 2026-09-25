@@ -22,7 +22,7 @@ digraph G {
 Un trozo del grafo de la comuna de Independencia.
 ::::
 :::: {.column width="42%"}
-- La base de Independencia y el motor pesan 768 KB y se descargan con la página web.
+- La base de Independencia y el motor pesan 960 KB y se descargan con la página web.
 - Las consultas corren en el teléfono y responden en milisegundos, sin conexión.
 - La desarrolla el DCC de la Universidad de Chile.
 ::::
@@ -110,7 +110,7 @@ digraph Q {
 
 La base guarda a qué calle pertenece cada lugar, así que la consulta recorre dos aristas.
 
-froGQL encontró los 132 lugares en 3 milisegundos.
+froGQL encontró los 132 lugares en 2 milisegundos.
 ::::
 :::
 
@@ -135,7 +135,7 @@ digraph T {
     s [label="Resultado"];
     q -> m -> s;
   }
-  web -> m [label="768 KB,\nuna vez"];
+  web -> m [label="960 KB,\nuna vez"];
 }
 ```
 
@@ -173,8 +173,8 @@ Las flechas hacia `Calle` son aristas `EN_CALLE`. `CONECTA` suma las redes de au
 ::::
 :::: {.column width="42%"}
 - Los datos son de OpenStreetMap, SOSAFE (abril de 2024) y Foursquare.
-- La base y el motor pesan 768 KB comprimidos.
-- Abrir la base toma 100 ms y la consulta del reclamo, 3 ms.
+- La base y el motor pesan 960 KB comprimidos.
+- Abrir la base toma 50 ms y la consulta del reclamo, 2 ms.
 - En el Gran Santiago, con cien veces más nodos, esa consulta tarda lo mismo.
 ::::
 :::
